@@ -1,0 +1,114 @@
+/* Student Study Assistant – card layout and spacing */
+
+.student-study-assistant {
+  display: block;
+}
+
+/* Controls */
+.student-study-assistant .controls {
+  margin-top: 8px;
+}
+
+/* Metrics chips */
+.metrics-chips {
+  margin-top: 12px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.metrics-chips span {
+  background: #1a2234;
+  color: #e6ecff;
+  border: 1px solid #2a3a55;
+  padding: 6px 10px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+}
+
+/* Generic card */
+.card {
+  background: #0f1320;
+  border: 1px solid #233149;
+  border-radius: 12px;
+  padding: 14px 16px;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.25);
+}
+
+.transcript-card {
+  margin-top: 12px;
+}
+
+/* Materials section */
+.materials {
+  margin-top: 18px;
+}
+
+.material-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+.material-card {
+  background: linear-gradient(180deg, rgba(18,24,38,1) 0%, rgba(14,19,31,1) 100%);
+  border: 1px solid rgba(61,88,160,0.25);
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 10px 24px rgba(8,12,20,0.5);
+  transition: transform .15s ease, box-shadow .2s ease;
+}
+.material-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 28px rgba(8,12,20,0.6);
+}
+
+.material-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.material-title {
+  margin: 0;
+  font-weight: 800;
+  color: #dfe7ff;
+  letter-spacing: .3px;
+  font-size: 1.05rem;
+}
+
+.material-content p {
+  white-space: pre-wrap;
+  margin: 6px 0 0 0;
+  line-height: 1.55;
+  color: #dde6ff;
+}
+
+.material-content ul {
+  margin: 6px 0 0 0;
+  padding-left: 18px;
+}
+.material-content li {
+  margin-bottom: 6px;
+  line-height: 1.5;
+  color: #e2ebff;
+}
+
+/* Buttons inside cards */
+.material-card .control-button {
+  background: #1e2a44;
+  border: 1px solid #30456c;
+  color: #eaf0ff;
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+
+/* Textarea for manual mode */
+.student-study-assistant textarea {
+  background: #0b1020;
+  color: #e8f0ff;
+  border: 1px solid #21314f;
+  border-radius: 10px;
+  padding: 10px 12px;
+  line-height: 1.5;
+}

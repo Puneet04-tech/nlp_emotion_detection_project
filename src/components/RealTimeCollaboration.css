@@ -1,0 +1,128 @@
+/* Real-time Collaboration Styles */
+
+.realtime-collaboration {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.collaboration-toggle {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.collaboration-toggle::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transition: all 0.3s ease;
+  transform: translate(-50%, -50%);
+}
+
+.collaboration-toggle:hover::before {
+  width: 100px;
+  height: 100px;
+}
+
+.collaboration-toggle:hover {
+  transform: scale(1.1);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+}
+
+.collaboration-panel {
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.user-avatar {
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.user-avatar:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.activity-indicator {
+  transition: all 0.2s ease;
+}
+
+.activity-indicator:hover {
+  background: rgba(59, 130, 246, 0.15) !important;
+  transform: translateX(4px);
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.2);
+  }
+}
+
+.shared-analysis-card {
+  transition: all 0.2s ease;
+}
+
+.shared-analysis-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.1) !important;
+  border-color: #3b82f6 !important;
+}
+
+.shared-analysis-card button {
+  transition: all 0.2s ease;
+}
+
+.shared-analysis-card button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+/* Loading states */
+.collaboration-loading {
+  animation: pulse 2s infinite;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .collaboration-panel {
+    width: calc(100vw - 40px) !important;
+    right: 20px !important;
+    left: 20px !important;
+  }
+  
+  .collaboration-toggle {
+    width: 50px !important;
+    height: 50px !important;
+    font-size: 20px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .collaboration-panel {
+    top: 80px !important;
+    width: calc(100vw - 20px) !important;
+    right: 10px !important;
+    left: 10px !important;
+  }
+}

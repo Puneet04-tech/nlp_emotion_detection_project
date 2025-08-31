@@ -1,0 +1,193 @@
+/* Enhanced Transcript Analysis CSS - Optimized for Performance */
+
+/* Spinner Animation */
+@keyframes spin {
+  0% { 
+    transform: rotate(0deg); 
+  }
+  100% { 
+    transform: rotate(360deg); 
+  }
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+/* Progress Bar Animation */
+.progress-container {
+  transition: all 0.3s ease;
+}
+
+.progress-container:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(79, 140, 255, 0.3);
+}
+
+/* Stat Card Animations */
+.stat-card {
+  transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+  cursor: default;
+}
+
+.stat-card:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+/* Key Phrases Animation */
+.key-phrases span {
+  transition: all 0.2s ease;
+  animation: slideInUp 0.5s ease forwards;
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.key-phrases span:nth-child(1) { animation-delay: 0.1s; }
+.key-phrases span:nth-child(2) { animation-delay: 0.2s; }
+.key-phrases span:nth-child(3) { animation-delay: 0.3s; }
+.key-phrases span:nth-child(4) { animation-delay: 0.4s; }
+.key-phrases span:nth-child(5) { animation-delay: 0.5s; }
+
+@keyframes slideInUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.key-phrases span:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 4px 16px rgba(79, 140, 255, 0.4);
+}
+
+/* Sentiment Analysis Animations */
+.sentiment-analysis {
+  animation: fadeInScale 0.6s ease forwards;
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+@keyframes fadeInScale {
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Topic Analysis Animation */
+.topic-analysis {
+  animation: slideInRight 0.7s ease forwards;
+  opacity: 0;
+  transform: translateX(30px);
+}
+
+@keyframes slideInRight {
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Advanced Analysis Animation */
+.advanced-analysis {
+  animation: fadeInUp 0.8s ease forwards;
+  opacity: 0;
+  transform: translateY(30px);
+}
+
+@keyframes fadeInUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Loading State Optimization */
+.loading-skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Enhanced Analysis Container */
+.enhanced-transcript-analysis {
+  will-change: transform;
+  transform: translateZ(0); /* Hardware acceleration */
+}
+
+/* Performance Optimizations */
+.enhanced-transcript-analysis * {
+  box-sizing: border-box;
+}
+
+/* Smooth Transitions for All Interactive Elements */
+.enhanced-transcript-analysis button,
+.enhanced-transcript-analysis .stat-card,
+.enhanced-transcript-analysis details summary {
+  transition: all 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+  will-change: transform;
+}
+
+/* Focus States for Accessibility */
+.enhanced-transcript-analysis button:focus,
+.enhanced-transcript-analysis details summary:focus {
+  outline: 2px solid #7ed957;
+  outline-offset: 2px;
+}
+
+/* Responsive Grid Adjustments */
+@media (max-width: 768px) {
+  .quick-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .stat-card {
+    padding: 12px;
+  }
+  
+  .stat-card div:first-child {
+    font-size: 1.5em;
+  }
+}
+
+@media (max-width: 480px) {
+  .quick-stats {
+    grid-template-columns: 1fr;
+  }
+  
+  .enhanced-transcript-analysis {
+    padding: 16px;
+  }
+}
+
+/* Dark Mode Optimizations */
+@media (prefers-color-scheme: dark) {
+  .loading-skeleton {
+    background: linear-gradient(90deg, #2a2a2a 25%, #3a3a3a 50%, #2a2a2a 75%);
+  }
+}
+
+/* Reduced Motion for Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .enhanced-transcript-analysis *,
+  .enhanced-transcript-analysis *::before,
+  .enhanced-transcript-analysis *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  
+  .spinner {
+    animation: none;
+  }
+}
