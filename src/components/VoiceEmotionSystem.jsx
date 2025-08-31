@@ -664,10 +664,18 @@ const VoiceEmotionSystem = ({ onEmotionDetected, isVisible }) => {
     initializeSystem();
 
     // Listen for global file-upload event from DetectionTab's input (simple cross-component wiring)
+    // Supports legacy events with `fileEvent` and new CustomEvent with `detail.input` (DOM input element)
     const fileHandler = (ev) => {
       try {
+        // Legacy path: external code attached the original event object as `fileEvent`
         if (ev && ev.fileEvent) {
           handleFileUpload(ev.fileEvent);
+        // Preferred path: CustomEvent carrying the real DOM input under detail.input
+        } else if (ev && ev.detail && ev.detail.input) {
+          // Pass a plain object shaped like an input event so handleFileUpload can read target.files
+          handleFileUpload({ target: ev.detail.input });
+        } else {
+          console.warn('voice-emotion-file-upload received no valid file data', ev);
         }
       } catch (e) { console.warn('file upload handler failed', e); }
     };
@@ -742,8 +750,12 @@ const VoiceEmotionSystem = ({ onEmotionDetected, isVisible }) => {
   const handleFileUpload = useCallback(async (e) => {
     const file = e?.target?.files?.[0];
     if (!file) return;
-    if (!file.type || !file.type.startsWith('audio')) {
-      alert('Please select a valid audio file (wav, mp3, m4a, etc.)');
+    // Accept if the browser reports an audio mime type, or the filename has a known audio extension
+    const audioExtRegex = /\.(opus|ogg|wav|mp3|m4a|flac|aac|webm)$/i;
+    const hasAudioMime = file.type && file.type.startsWith('audio');
+    const hasAudioExt = audioExtRegex.test(file.name || '');
+    if (!hasAudioMime && !hasAudioExt) {
+      alert('Please select a valid audio file (wav, mp3, m4a, opus, ogg, etc.)');
       if (e && e.target) e.target.value = '';
       return;
     }
@@ -762,31 +774,84 @@ const VoiceEmotionSystem = ({ onEmotionDetected, isVisible }) => {
     try {
       const arrayBuffer = await file.arrayBuffer();
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+      let freqData, timeData, audioBuffer;
 
-      // Create analyser to compute simple spectral features
-      const source = audioCtx.createBufferSource();
-      source.buffer = audioBuffer;
-      const analyser = audioCtx.createAnalyser();
-      analyser.fftSize = 2048;
-      const freqData = new Uint8Array(analyser.frequencyBinCount);
-      const timeData = new Uint8Array(analyser.frequencyBinCount);
+      try {
+        // Try direct decoding first
+        audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
 
-      const gain = audioCtx.createGain();
-      gain.gain.value = 0; // silent playback so user doesn't hear duplicate audio
+        // Create analyser to compute simple spectral features
+        const source = audioCtx.createBufferSource();
+        source.buffer = audioBuffer;
+        const analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 2048;
+        freqData = new Uint8Array(analyser.frequencyBinCount);
+        timeData = new Uint8Array(analyser.frequencyBinCount);
 
-      source.connect(analyser);
-      analyser.connect(gain);
-      gain.connect(audioCtx.destination);
+        const gain = audioCtx.createGain();
+        gain.gain.value = 0; // silent playback so user doesn't hear duplicate audio
 
-      // start playback silently to populate analyser data
-      source.start(0);
+        source.connect(analyser);
+        analyser.connect(gain);
+        gain.connect(audioCtx.destination);
 
-      // wait a short time for analyser to be populated
-      await new Promise(resolve => setTimeout(resolve, 250));
+        // start playback silently to populate analyser data
+        try { source.start(0); } catch (err) { /* ignore */ }
 
-      analyser.getByteFrequencyData(freqData);
-      analyser.getByteTimeDomainData(timeData);
+        // wait a short time for analyser to be populated
+        await new Promise(resolve => setTimeout(resolve, 250));
+
+        analyser.getByteFrequencyData(freqData);
+        analyser.getByteTimeDomainData(timeData);
+        try { source.stop(); } catch (e) {}
+      } catch (decodeErr) {
+        // Fallback: some browsers can't decode opus/ogg via decodeAudioData. Use an HTMLAudioElement and MediaElementSource.
+        console.warn('decodeAudioData failed, trying media element fallback:', decodeErr);
+
+        const analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 2048;
+        freqData = new Uint8Array(analyser.frequencyBinCount);
+        timeData = new Uint8Array(analyser.frequencyBinCount);
+
+        const audioEl = document.createElement('audio');
+        audioEl.src = URL.createObjectURL(file);
+        audioEl.crossOrigin = 'anonymous';
+        audioEl.muted = true; // allow autoplay in many browsers
+        audioEl.preload = 'auto';
+
+        const sourceNode = audioCtx.createMediaElementSource(audioEl);
+        sourceNode.connect(analyser);
+        analyser.connect(audioCtx.destination);
+
+        // Try to resume audio context and play briefly to populate analyser
+        try {
+          if (audioCtx.state === 'suspended' && audioCtx.resume) {
+            await audioCtx.resume();
+          }
+        } catch (resumeErr) {
+          console.warn('audioCtx.resume() failed:', resumeErr);
+        }
+
+        try {
+          const playPromise = audioEl.play();
+          if (playPromise && playPromise.catch) {
+            // ignore play errors (some browsers block autoplay), but still attempt
+            playPromise.catch(() => {});
+          }
+        } catch (playErr) {
+          console.warn('audioEl.play() failed:', playErr);
+        }
+
+        // wait briefly for media pipeline to start
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        analyser.getByteFrequencyData(freqData);
+        analyser.getByteTimeDomainData(timeData);
+
+        try { audioEl.pause(); } catch (e) {}
+        try { sourceNode.disconnect(); } catch (e) {}
+        try { URL.revokeObjectURL(audioEl.src); } catch (e) {}
+      }
 
       // compute basic features
       // volume (RMS-like)
@@ -837,8 +902,7 @@ const VoiceEmotionSystem = ({ onEmotionDetected, isVisible }) => {
       }
 
       // stop playback and close context
-      try { source.stop(); } catch (e) {}
-      try { audioCtx.close(); } catch (e) {}
+  try { audioCtx.close(); } catch (e) {}
     } catch (err) {
       console.error('Failed to process uploaded audio file:', err);
       alert('Failed to analyze uploaded audio: ' + (err && err.message ? err.message : String(err)));
@@ -1175,10 +1239,17 @@ const DetectionTab = ({
     <div style={{ textAlign: 'center', margin: '20px 0' }}>
       <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
         <input type="file" accept="audio/*" onChange={(e) => {
-          // find and call the parent handler if available via window (fallback)
-          const evt = new Event('voice-emotion-file-upload');
-          evt.fileEvent = e;
-          window.dispatchEvent(evt);
+          // Dispatch a CustomEvent carrying the real DOM input element to avoid React synthetic event pooling
+          try {
+            const inputEl = e.target;
+            const custom = new CustomEvent('voice-emotion-file-upload', { detail: { input: inputEl } });
+            window.dispatchEvent(custom);
+          } catch (err) {
+            // Fallback to legacy approach (may fail if synthetic event is pooled)
+            const evt = new Event('voice-emotion-file-upload');
+            evt.fileEvent = e;
+            window.dispatchEvent(evt);
+          }
         }} style={{ display: 'none' }} />
         <div style={{ padding: '10px 14px', borderRadius: 10, border: '1px solid #e2e8f0', background: '#fff' }}>
           📁 Upload Audio for Analysis

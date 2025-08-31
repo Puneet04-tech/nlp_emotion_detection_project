@@ -267,14 +267,35 @@ class VoiceTrainingManager {
     try {
       const remoteUrl = localStorage.getItem('remoteVoiceTrainingUrl');
       if (remoteUrl) {
-        const form = new FormData();
-        form.append('emotion', emotion);
-        form.append('transcript', transcript || '');
-        form.append('features', JSON.stringify(voiceFeatures || {}));
-        if (audioBlob) form.append('audio', audioBlob, `${sample.id}.wav`);
-        fetch(remoteUrl, { method: 'POST', body: form }).then(res => {
-          if (!res.ok) console.warn('Remote upload failed', res.statusText);
-        }).catch(err => console.warn('Remote upload error', err));
+        try {
+          const form = new FormData();
+          form.append('emotion', emotion);
+          form.append('transcript', transcript || '');
+          form.append('features', JSON.stringify(voiceFeatures || {}));
+          if (audioBlob) {
+            // Choose extension based on blob type to avoid confusing server
+            const mime = audioBlob.type || '';
+            let ext = '.wav';
+            if (mime.includes('webm') || mime.includes('opus')) ext = '.webm';
+            else if (mime.includes('mpeg') || mime.includes('mp3')) ext = '.mp3';
+            else if (mime.includes('ogg')) ext = '.ogg';
+            else if (mime.includes('wav')) ext = '.wav';
+            form.append('audio', audioBlob, `${sample.id}${ext}`);
+          }
+
+          console.debug('Uploading training sample to', remoteUrl, { emotion, sampleId: sample.id, features: voiceFeatures, hasAudio: !!audioBlob });
+          fetch(remoteUrl, { method: 'POST', body: form }).then(async (res) => {
+            if (!res.ok) {
+              let text = '';
+              try { text = await res.text(); } catch(e) {}
+              console.warn('Remote upload failed', res.status, res.statusText, text);
+            } else {
+              console.debug('Remote upload successful', res.status);
+            }
+          }).catch(err => console.warn('Remote upload error', err));
+        } catch (innerErr) {
+          console.warn('Failed building upload form or sending it', innerErr);
+        }
       }
     } catch (e) {
       console.warn('Failed to send remote training sample', e);
@@ -1138,6 +1159,8 @@ const TrainingCenter = ({ analyzer = null, currentTranscript = '', isRecording =
   const activeAnalyzer = analyzer || localAnalyzer;
   const activeTranscript = currentTranscript || localTranscript;
   const activeRecording = isRecording || isLocalRecording;
+  // Alias for training manager / storage (may be null until analyzer initialized)
+  const voiceManager = activeAnalyzer ? activeAnalyzer.trainingManager : null;
 
   useEffect(() => {
     if (activeAnalyzer) {
@@ -1864,12 +1887,23 @@ const TrainingCenter = ({ analyzer = null, currentTranscript = '', isRecording =
           form.append('emotion', selectedEmotion);
           form.append('transcript', activeTranscript || '');
           form.append('features', JSON.stringify(voiceFeatures || {}));
-          if (finalBlob) form.append('audio', finalBlob, `${sample.id}.wav`);
+          if (finalBlob) {
+            const mime = finalBlob.type || '';
+            let ext = '.wav';
+            if (mime.includes('webm') || mime.includes('opus')) ext = '.webm';
+            else if (mime.includes('mpeg') || mime.includes('mp3')) ext = '.mp3';
+            else if (mime.includes('ogg')) ext = '.ogg';
+            else if (mime.includes('wav')) ext = '.wav';
+            form.append('audio', finalBlob, `${sample.id}${ext}`);
+          }
           const uploadUrl = remoteUrl || localStorage.getItem('remoteVoiceTrainingUrl') || 'http://localhost:4000/upload';
+          console.debug('Uploading single sample to', uploadUrl, { sampleId: sample.id, emotion: selectedEmotion, hasAudio: !!finalBlob });
           const res = await fetch(uploadUrl, { method: 'POST', body: form });
           if (res.ok) {
             setRemoteUploadStatus('Uploaded ✅');
           } else {
+            const text = await res.text().catch(()=>'');
+            console.warn('Upload failed', res.status, res.statusText, text);
             setRemoteUploadStatus('Upload failed');
           }
         } catch (err) {
@@ -1930,6 +1964,11 @@ const TrainingCenter = ({ analyzer = null, currentTranscript = '', isRecording =
     }
     setTrainingMessage('⏳ Uploading samples to server...');
     try {
+      if (!voiceManager) {
+        setTrainingMessage('❌ Voice manager not available. Initialize the analyzer first.');
+        setTimeout(() => setTrainingMessage(''), 3000);
+        return;
+      }
       const samples = await voiceManager.voiceStorage.getVoiceSamples();
       let uploaded = 0;
       for (const s of samples) {
@@ -1939,12 +1978,24 @@ const TrainingCenter = ({ analyzer = null, currentTranscript = '', isRecording =
           form.append('emotion', s.emotion);
           form.append('transcript', s.transcript || '');
           form.append('features', JSON.stringify(s.voiceFeatures || {}));
-          if (s.audioBlob) form.append('audio', s.audioBlob, `${s.id}.wav`);
+          if (s.audioBlob) {
+            const mime = s.audioBlob.type || '';
+            let ext = '.wav';
+            if (mime.includes('webm') || mime.includes('opus')) ext = '.webm';
+            else if (mime.includes('mpeg') || mime.includes('mp3')) ext = '.mp3';
+            else if (mime.includes('ogg')) ext = '.ogg';
+            else if (mime.includes('wav')) ext = '.wav';
+            form.append('audio', s.audioBlob, `${s.id}${ext}`);
+          }
+          console.debug('Bulk uploading sample', s.id, remoteUrl);
           const resp = await fetch(remoteUrl, { method: 'POST', body: form });
           if (resp.ok) {
             uploaded++;
             await voiceManager.voiceStorage.updateUploadStatus(s.id, 'uploaded');
           } else {
+            let text = '';
+            try { text = await resp.text(); } catch(e) {}
+            console.warn('Bulk upload failed for', s.id, resp.status, resp.statusText, text);
             await voiceManager.voiceStorage.updateUploadStatus(s.id, 'failed');
           }
         } catch (e) {
@@ -1967,6 +2018,11 @@ const TrainingCenter = ({ analyzer = null, currentTranscript = '', isRecording =
     if (!remoteUrl) { setTrainingMessage('⚠️ remoteVoiceTrainingUrl not set'); setTimeout(()=>setTrainingMessage(''),2000); return; }
     setTrainingMessage('⏳ Retrying failed uploads...');
     try {
+      if (!voiceManager) {
+        setTrainingMessage('❌ Voice manager not available. Initialize the analyzer first.');
+        setTimeout(() => setTrainingMessage(''), 3000);
+        return;
+      }
       const failed = await voiceManager.voiceStorage.getSamplesByUploadStatus('failed');
       let retried = 0;
       for (const s of failed) {
