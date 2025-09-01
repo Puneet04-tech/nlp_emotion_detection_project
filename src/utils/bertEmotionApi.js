@@ -97,8 +97,9 @@ export async function analyzeEmotionWithBERT(text, options = {}) {
   // quick sanitize
   if (!text || !text.trim()) return { array: [{ label: 'neutral', score: 0.6 }], map: { neutral: 0.6 } };
 
-  const endpoint = options.endpoint || localStorage.getItem('hf_endpoint') || process.env.HF_ENDPOINT || null;
-  const apiKey = options.apiKey || localStorage.getItem('hf_api_key') || process.env.HF_API_KEY || null;
+  // Only use localStorage and options for endpoint/apiKey (process.env is not available in browser)
+  const endpoint = options.endpoint || localStorage.getItem('hf_endpoint') || null;
+  const apiKey = options.apiKey || localStorage.getItem('hf_api_key') || null;
   const candidates = options.candidates || DEFAULT_CANDIDATES;
 
   // Try calling remote HF-like endpoint if configured

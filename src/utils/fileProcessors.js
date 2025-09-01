@@ -614,32 +614,7 @@ ${text}
 export const processAudioFile = async (file, onProgress = null, language = 'en-US', translationSettings = {}, forceVosk = false) => {
   if (onProgress) onProgress(`🎵 Processing audio file (Vosk): ${file.name}...`);
 
-  // Fast path: if not forced to Vosk, try the browser SpeechRecognition first for a quick transcript
-  if (!forceVosk) {
-    try {
-      if (onProgress) onProgress('🔎 Attempting quick browser SpeechRecognition first...');
-      const srTranscript = await speechRecognitionFallback(file, onProgress, language);
-      if (srTranscript && srTranscript.trim()) {
-        // decode audio to get duration for reporting
-        try {
-          const ab = await file.arrayBuffer();
-          const tmpCtx = new (window.AudioContext || window.webkitAudioContext)();
-          const decoded = await tmpCtx.decodeAudioData(ab.slice(0));
-          const durationSec = Math.round(decoded.duration);
-          const cleanTranscript = srTranscript.trim().replace(/\s+/g, ' ').replace(/([.!?])\s*([a-z])/g, '$1 $2');
-          const wordCount = cleanTranscript.split(/\s+/).filter(w => w.length > 0).length;
-          const estimatedReadingTime = Math.ceil(wordCount / 200);
-          const result = `🎵 AUDIO SPEECH EXTRACTION COMPLETE (Browser SpeechRecognition)\n\n📁 File Information:\n• Name: ${file.name}\n• Size: ${(file.size / 1024 / 1024).toFixed(2)} MB\n• Format: ${file.type}\n• Duration: ${durationSec}s\n• Detected Language: ${getLanguageInfo(language).name}\n• Processing method: Browser SpeechRecognition\n\n${getLanguageInfo(language).flag} 🎤 EXTRACTED SPEECH TRANSCRIPT (Browser SpeechRecognition):\n"${cleanTranscript}"\n\n📊 Transcription Statistics:\n• Total words: ${wordCount.toLocaleString()}\n• Estimated reading time: ${estimatedReadingTime} minute(s)\n\n✅ Audio-to-text extraction completed successfully using Browser SpeechRecognition.`;
-          return result;
-        } catch (decErr) {
-          // If decode fails, just return transcript text
-          return srTranscript.trim();
-        }
-      }
-    } catch (srErr) {
-      console.warn('Quick SpeechRecognition attempt failed or produced no transcript:', srErr);
-    }
-  }
+  // Always use Vosk for file uploads. Do not use browser SpeechRecognition.
 
   try {
     // Dynamically import Vosk
@@ -662,9 +637,9 @@ export const processAudioFile = async (file, onProgress = null, language = 'en-U
     } catch (modErr) {
       clearTimeout(voskTimeout);
       console.warn('Vosk model load failed:', modErr);
-      // Fall back to Web Speech API if model can't be loaded
-      if (onProgress) onProgress('⚠️ Vosk model unavailable, falling back to browser SpeechRecognition.');
-      return await speechRecognitionFallback(file, onProgress, language);
+  // If Vosk model can't be loaded, show error and do not fall back
+  if (onProgress) onProgress('❌ Vosk model unavailable. Speech recognition for file uploads is not supported in browser.');
+  throw new Error('Vosk model unavailable.');
     }
     if (voskTimedOut) throw new Error('Vosk model load timed out');
 
@@ -719,8 +694,8 @@ export const processAudioFile = async (file, onProgress = null, language = 'en-U
     if (onProgress) onProgress('✅ Vosk transcription attempt completed');
 
     if (!voskTranscript || !voskTranscript.trim()) {
-      if (onProgress) onProgress('⚠️ Vosk produced no transcript or speech not detected. Falling back to browser SpeechRecognition.');
-      return await speechRecognitionFallback(file, onProgress, language);
+      if (onProgress) onProgress('⚠️ No speech detected in audio file.');
+      return '';
     }
 
     const cleanTranscript = voskTranscript.trim().replace(/\s+/g, ' ').replace(/([.!?])\s*([a-z])/g, '$1 $2');
@@ -752,12 +727,8 @@ ${getLanguageInfo(language).flag} 🎤 EXTRACTED SPEECH TRANSCRIPT (Vosk):
   } catch (error) {
     console.error('Vosk transcription error:', error);
     if (onProgress) onProgress('❌ Vosk transcription failed: ' + (error.message || error));
-    // If Vosk fails for any reason, try SpeechRecognition fallback before throwing
-    try {
-      return await speechRecognitionFallback(file, onProgress, language);
-    } catch (srErr) {
-      throw new Error(`Transcription failed: ${error.message || error}; fallback error: ${srErr.message || srErr}`);
-    }
+  // If Vosk fails for any reason, show error and do not fall back
+  throw new Error(`Transcription failed: ${error.message || error}`);
   }
 };
 

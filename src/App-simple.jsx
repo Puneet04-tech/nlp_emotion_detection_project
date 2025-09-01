@@ -33,11 +33,10 @@ import TrainingCenter from './components/TrainingCenter';
 import EnhancedVoiceEmotionAnalyzer from './components/EnhancedVoiceEmotionAnalyzer';
 
 function App() { 
+  // --- BEAUTIFUL UI STATE ---
   const [activeTab, setActiveTab] = useState('upload');
-  // Persistent analysis history state
   const [analysisHistory, setAnalysisHistory] = useState([]);
   const [viewedAnalysis, setViewedAnalysis] = useState(null);
-  // Track if initial load from localStorage is done (use state, not ref)
   const [historyLoaded, setHistoryLoaded] = useState(false);
 
   // Load history from localStorage on mount (ensure all fields are restored, add debug log)
@@ -49,39 +48,160 @@ function App() {
         if (Array.isArray(parsed)) {
           const mapped = parsed.map(item => {
             // Defensive: fill in all fields, even if item is malformed
-            return {
-              id: (item && item.id) ? item.id : Date.now() + Math.random(),
-              type: (item && item.type) ? item.type : 'Unknown',
-              date: (item && item.date) ? item.date : new Date().toISOString(),
-              transcript: (item && typeof item.transcript === 'string') ? item.transcript : '',
-              summary: (item && typeof item.summary === 'string') ? item.summary : '',
-              analysis: (item && typeof item.analysis !== 'undefined') ? item.analysis : null,
-              chartData: (item && typeof item.chartData !== 'undefined') ? item.chartData : null
-            };
+            // --- BEAUTIFUL UI COMPONENTS ---
+            const BeautifulHeader = () => (
+              <header style={{
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: 'white',
+                padding: '48px 0 32px 0',
+                textAlign: 'center',
+                borderRadius: '0 0 48px 48px',
+                boxShadow: '0 8px 32px rgba(102,126,234,0.15)',
+                marginBottom: 40
+              }}>
+                <h1 style={{ fontSize: '3.5rem', fontWeight: 900, margin: 0, textShadow: '2px 2px 8px rgba(0,0,0,0.08)' }}>
+                  🎤 AI Voice & Emotion Analyzer
+                </h1>
+                <p style={{ fontSize: '1.3rem', fontWeight: 400, opacity: 0.95, marginTop: 18 }}>
+                  Advanced neural emotion detection, transcript analysis, and ML training center
+                </p>
+              </header>
+            );
+
+            const BeautifulTabs = () => (
+              <nav style={{
+                display: 'flex',
+                justifyContent: 'center',
+                gap: 18,
+                marginBottom: 32,
+                background: 'white',
+                borderRadius: 20,
+                boxShadow: '0 4px 24px rgba(0,0,0,0.07)',
+                padding: '12px 0'
+              }}>
+                {[
+                  { id: 'upload', label: '📁 Upload', color: '#667eea' },
+                  { id: 'analysis', label: '📊 Analysis', color: '#10b981' },
+                  { id: 'history', label: '🕒 History', color: '#f59e0b' },
+                  { id: 'training', label: '🤖 Training', color: '#764ba2' }
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    style={{
+                      flex: 1,
+                      padding: '18px 32px',
+                      fontSize: '1.2rem',
+                      fontWeight: 700,
+                      border: 'none',
+                      borderRadius: 16,
+                      cursor: 'pointer',
+                      background: activeTab === tab.id
+                        ? `linear-gradient(135deg, ${tab.color}, ${tab.color}dd)`
+                        : 'transparent',
+                      color: activeTab === tab.id ? 'white' : '#64748b',
+                      boxShadow: activeTab === tab.id ? `0 8px 24px ${tab.color}40` : 'none',
+                      transition: 'all 0.3s ease',
+                      transform: activeTab === tab.id ? 'translateY(-2px)' : 'translateY(0)'
+                    }}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </nav>
+            );
+
+            // --- BEAUTIFUL MAIN CONTAINER ---
+            const BeautifulContainer = ({ children }) => (
+              <div style={{
+                maxWidth: 1200,
+                margin: '0 auto',
+                padding: '0 24px 48px 24px',
+                fontFamily: 'Inter, system-ui, sans-serif',
+                background: 'linear-gradient(120deg, #f8fafc 60%, #e0e7ff 100%)',
+                minHeight: '100vh',
+                borderRadius: 32,
+                boxShadow: '0 8px 48px rgba(102,126,234,0.08)'
+              }}>
+                {children}
+              </div>
+            );
+
+            // --- BEAUTIFUL APP RENDER ---
+            return (
+              <BeautifulContainer>
+                <BeautifulHeader />
+                <BeautifulTabs />
+                {/* --- BEAUTIFUL TAB CONTENT --- */}
+                <div style={{ marginTop: 24 }}>
+                  {activeTab === 'upload' && (
+                    <section style={{
+                      background: 'white',
+                      borderRadius: 24,
+                      boxShadow: '0 4px 24px rgba(102,126,234,0.07)',
+                      padding: '40px',
+                      marginBottom: 32
+                    }}>
+                      {/* ...existing upload UI... */}
+                      <h2 style={{ fontSize: '2rem', fontWeight: 800, color: '#667eea', marginBottom: 18 }}>Upload Audio/Text</h2>
+                      {/* Place your upload form/input here */}
+                    </section>
+                  )}
+                  {activeTab === 'analysis' && (
+                    <section style={{
+                      background: 'white',
+                      borderRadius: 24,
+                      boxShadow: '0 4px 24px rgba(16,185,129,0.07)',
+                      padding: '40px',
+                      marginBottom: 32
+                    }}>
+                      {/* ...existing analysis UI... */}
+                      <h2 style={{ fontSize: '2rem', fontWeight: 800, color: '#10b981', marginBottom: 18 }}>Analysis Results</h2>
+                      {/* Place your analysis results here */}
+                    </section>
+                  )}
+                  {activeTab === 'history' && (
+                    <section style={{
+                      background: 'white',
+                      borderRadius: 24,
+                      boxShadow: '0 4px 24px rgba(245,158,11,0.07)',
+                      padding: '40px',
+                      marginBottom: 32
+                    }}>
+                      {/* ...existing history UI... */}
+                      <h2 style={{ fontSize: '2rem', fontWeight: 800, color: '#f59e0b', marginBottom: 18 }}>Analysis History</h2>
+                      {/* Place your history list here */}
+                    </section>
+                  )}
+                  {activeTab === 'training' && (
+                    <section style={{
+                      background: 'white',
+                      borderRadius: 24,
+                      boxShadow: '0 4px 24px rgba(118,75,162,0.07)',
+                      padding: '40px',
+                      marginBottom: 32
+                    }}>
+                      {/* ...existing training UI... */}
+                      <h2 style={{ fontSize: '2rem', fontWeight: 800, color: '#764ba2', marginBottom: 18 }}>ML Training Center</h2>
+                      {/* Place your training center UI here */}
+                    </section>
+                  )}
+                </div>
+              </BeautifulContainer>
+            );
           });
           setAnalysisHistory(mapped);
-        } else {
-          setAnalysisHistory([]);
         }
       } catch (e) {
+        console.warn('Failed to parse analysis history from localStorage:', e);
         setAnalysisHistory([]);
-        console.warn('[AnalysisHistory] Failed to parse localStorage:', e);
-        // Clear corrupted localStorage and reload page to recover
-        try {
-          localStorage.removeItem('analysisHistory');
-          alert('Analysis history was corrupted and has been reset. The page will reload.');
-          window.location.reload();
-        } catch (err) {
-          // fallback: just clear state
-          setAnalysisHistory([]);
-        }
       }
-    } else {
-      setAnalysisHistory([]);
-      console.log('[AnalysisHistory] No history found in localStorage.');
     }
     setHistoryLoaded(true);
   }, []);
+  // ...existing code...
+  // Fix for analysis history parsing block
+  // (This block should be inside useEffect, not after return)
 
   // Save history to localStorage when it changes (all fields, add debug log)
   useEffect(() => {
