@@ -1,0 +1,30 @@
+🎤 VOICE EMOTION DETECTION - QUICK START
+
+🚀 YOUR SERVER IS RUNNING!
+=========================
+
+✅ Share this URL with ANYONE:
+   http://172.25.226.193:4000
+
+✅ Your Admin Dashboard:
+   http://localhost:4000/admin-dashboard.html
+
+🔒 Chrome "Not Secure"? 
+   → Click "Advanced" 
+   → Click "Proceed to site (unsafe)"
+   → Works perfectly!
+
+💻 Server Always Running:
+   → Keep the batch file window minimized
+   → Never close it completely
+   → Server stays active!
+
+📊 What You Get:
+   ✅ All user audio files saved
+   ✅ Real-time emotion analysis  
+   ✅ Complete transcripts
+   ✅ User IP tracking
+   ✅ Session monitoring
+   ✅ Data export anytime
+
+🎯 READY TO SHARE! 🎯

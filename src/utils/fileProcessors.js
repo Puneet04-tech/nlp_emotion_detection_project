@@ -1,5 +1,6 @@
 // Complete file processing utilities with real-time extraction
 import Tesseract from 'tesseract.js';
+import { voskManager } from './voskModelManager.js';
 
 // Import simple processors to avoid loops
 
@@ -612,17 +613,66 @@ ${text}
  * Process audio files using Web Speech API - ENHANCED for all English variants
  */
 export const processAudioFile = async (file, onProgress = null, language = 'en-US', translationSettings = {}, forceVosk = false) => {
-  if (onProgress) onProgress(`🎵 Processing audio file (Vosk): ${file.name}...`);
+  if (onProgress) onProgress(`🎵 Processing audio file: ${file.name}...`);
 
   // Always use Vosk for file uploads. Do not use browser SpeechRecognition.
 
   try {
-    // Dynamically import Vosk
-    const vosk = await import('vosk-browser');
-    const { createModel, createRecognizer } = vosk;
-    const modelPath = '/models/vosk-model-small-en-us-0.15';
+    // Check if Vosk models are available first
+    const modelPaths = [
+      '/models/vosk-model-small-en-us-0.15',
+      '/models/vosk-model-small-hi-0.22'
+    ];
 
-    if (onProgress) onProgress(`📥 Loading Vosk model from ${modelPath} ...`);
+    if (onProgress) onProgress('� Checking Vosk model availability...');
+
+    // Try to import Vosk
+    let vosk;
+    try {
+      vosk = await import('vosk-browser');
+    } catch (voskImportError) {
+      console.warn('❌ Vosk-browser import failed:', voskImportError);
+      throw new Error('Vosk library not available');
+    }
+
+    const { createModel, createRecognizer } = vosk;
+    let model = null;
+    let modelPath = null;
+
+    // Try to load available models
+    for (const path of modelPaths) {
+      try {
+        if (onProgress) onProgress(`📥 Trying Vosk model: ${path}...`);
+        console.log(`🔍 Attempting to load Vosk model from: ${path}`);
+        model = await createModel(path);
+        modelPath = path;
+        console.log(`✅ Successfully loaded Vosk model from: ${path}`);
+        break;
+      } catch (modelError) {
+        console.warn(`⚠️ Failed to load model from ${path}:`, modelError.message);
+        
+        // Provide specific error information
+        if (modelError.message.includes('archive format') || modelError.message.includes('Unrecognized')) {
+          console.warn(`   📁 Model archive format issue at ${path}`);
+        } else if (modelError.message.includes('fetch') || modelError.message.includes('network')) {
+          console.warn(`   🌐 Network issue accessing ${path}`);
+        } else if (modelError.message.includes('permission') || modelError.message.includes('access')) {
+          console.warn(`   🔒 Permission issue accessing ${path}`);
+        }
+        
+        continue;
+      }
+    }
+
+    if (!model) {
+      const errorMsg = 'No Vosk models could be loaded. Issues found:\n' +
+        '1. Model files may be corrupted or incomplete\n' +
+        '2. Network connectivity issues for remote models\n' +
+        '3. Model format not recognized by vosk-browser\n' +
+        'The system will continue with audio analysis only.';
+      console.error('❌ Vosk model loading failed:', errorMsg);
+      throw new Error(errorMsg);
+    }
 
     // Increase timeout guard to 120s for slower environments
     let voskTimedOut = false;
@@ -630,17 +680,6 @@ export const processAudioFile = async (file, onProgress = null, language = 'en-U
       voskTimedOut = true;
       if (onProgress) onProgress('❌ Vosk transcription timed out (120s).');
     }, 120000);
-
-    let model;
-    try {
-      model = await createModel(modelPath);
-    } catch (modErr) {
-      clearTimeout(voskTimeout);
-      console.warn('Vosk model load failed:', modErr);
-  // If Vosk model can't be loaded, show error and do not fall back
-  if (onProgress) onProgress('❌ Vosk model unavailable. Speech recognition for file uploads is not supported in browser.');
-  throw new Error('Vosk model unavailable.');
-    }
     if (voskTimedOut) throw new Error('Vosk model load timed out');
 
     if (onProgress) onProgress('♻️ Resampling audio to 16kHz for Vosk...');

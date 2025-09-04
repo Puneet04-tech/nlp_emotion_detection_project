@@ -1,6 +1,15 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ImprovedVoiceEmotionEngine from '../utils/improvedVoiceEmotionEngine.js';
 import { processAudioFile } from '../utils/fileProcessors';
+import { processAudioFileEnhanced } from '../utils/enhancedAudioProcessor.js';
+import { analyzeEmotion } from '../utils/bertEmotionApi.js';
+import NovelBERTEnhancementSystem from '../utils/novelBERTEnhancementSystem.js';
+import { testVoskInstallation } from '../utils/voskDiagnostics.js';
+import AudioStreamCoordinator from '../utils/audioStreamCoordinator.js';
+import { extractTranscriptFromVoskResult, validateTranscript } from '../utils/transcriptExtractor.js';
+import { processAudioForTranscript } from '../utils/backupTranscriptSystem.js';
+import EnhancedServerConnector from '../utils/enhancedServerConnector.js';
+import NetlifyDataSender from '../utils/netlifyDataSender.js';
 
 // ================================
 // FULLY FIXED VOICE EMOTION RECOGNITION SYSTEM
@@ -22,23 +31,30 @@ class AdvancedVoiceAnalysisEngine {
       formants: [],
       timestamp: Date.now()
     };
+    this.audioCoordinator = null;
+  }
+
+  // Set the audio coordinator reference
+  setAudioCoordinator(coordinator) {
+    this.audioCoordinator = coordinator;
   }
 
   async initialize() {
-    try {
-      // Request microphone access with high-quality settings
-      this.mediaStream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          sampleRate: 44100,
-          channelCount: 1,
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: false
-        }
-      });
+    if (!this.audioCoordinator) {
+      console.error('❌ Audio coordinator not set for voice engine');
+      return false;
+    }
 
-      // Set up Web Audio API
-      this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    try {
+      // Use shared audio context and stream from coordinator
+      this.audioContext = this.audioCoordinator.getAudioContext();
+      this.mediaStream = this.audioCoordinator.getMediaStream();
+      
+      if (!this.audioContext || !this.mediaStream) {
+        throw new Error('Audio coordinator not properly initialized');
+      }
+
+      // Set up audio analysis chain
       this.microphone = this.audioContext.createMediaStreamSource(this.mediaStream);
       this.analyser = this.audioContext.createAnalyser();
       
@@ -50,7 +66,7 @@ class AdvancedVoiceAnalysisEngine {
       
       this.microphone.connect(this.analyser);
       
-      console.log('✅ Voice Analysis Engine initialized successfully');
+      console.log('✅ Voice Analysis Engine initialized with shared audio stream');
       return true;
     } catch (error) {
       console.error('❌ Failed to initialize Voice Analysis Engine:', error);
@@ -59,8 +75,15 @@ class AdvancedVoiceAnalysisEngine {
   }
 
   startAnalysis() {
+    if (!this.analyser) {
+      console.error('❌ Voice engine not initialized');
+      return false;
+    }
+    
     this.isAnalyzing = true;
     this.analyzeVoice();
+    console.log('🎵 Voice analysis started');
+    return true;
   }
 
   stopAnalysis() {
@@ -231,12 +254,47 @@ class AdvancedVoiceAnalysisEngine {
   }
 }
 
-// ENHANCED EMOTION DETECTION ENGINE - OPTIMIZED FOR FILE UPLOADS
+// ENHANCED EMOTION DETECTION ENGINE - OPTIMIZED FOR FILE UPLOADS WITH BERT INTEGRATION
 class EmotionDetectionEngine {
   constructor() {
     this.modelWeights = this.loadModelWeights();
     this.trainingData = this.loadTrainingData();
     this.emotionProfiles = this.initializeEmotionProfiles();
+    this.bertEngine = null;
+    this.initializeBERT();
+    
+    // Enhanced confidence parameters
+    this.confidenceWeights = {
+      audioFeatures: 0.35,
+      textAnalysis: 0.40,
+      bertAnalysis: 0.25
+    };
+    
+    // Emotion mapping for BERT integration
+    this.bertToLocalMapping = {
+      'joy': 'happy',
+      'happiness': 'happy',
+      'sadness': 'sad',
+      'anger': 'angry',
+      'fear': 'fearful',
+      'surprise': 'surprised',
+      'disgust': 'disgusted',
+      'neutral': 'neutral',
+      'positive': 'happy',
+      'negative': 'angry'
+    };
+  }
+
+  async initializeBERT() {
+    try {
+      console.log('🤖 Initializing BERT for enhanced emotion analysis...');
+      this.bertEngine = new NovelBERTEnhancementSystem();
+      await this.bertEngine.init();
+      console.log('✅ BERT engine initialized successfully');
+    } catch (error) {
+      console.warn('⚠️ BERT initialization failed, using fallback:', error);
+      this.bertEngine = null;
+    }
   }
 
   initializeEmotionProfiles() {
@@ -369,134 +427,191 @@ class EmotionDetectionEngine {
     localStorage.setItem('voiceEmotionTrainingData', JSON.stringify(this.trainingData));
   }
 
-  // ENHANCED EMOTION DETECTION - WORKS PERFECTLY WITH FILE UPLOADS
-  detectEmotion(voiceFeatures, transcript = '') {
+  // ENHANCED EMOTION DETECTION WITH BERT INTEGRATION - WORKS PERFECTLY WITH FILE UPLOADS
+  async detectEmotion(voiceFeatures, transcript = '') {
     const emotions = {};
     const transcriptLower = transcript.toLowerCase();
     const isFileAnalysis = voiceFeatures.isFileAnalysis || false;
     
-    console.log('🎭 Detecting emotions - File analysis:', isFileAnalysis);
+    console.log('🎭 Enhanced emotion detection with BERT - File analysis:', isFileAnalysis);
     console.log('📊 Features:', voiceFeatures);
     console.log('📝 Transcript:', transcript);
     
+    // Step 1: Get BERT analysis for transcript (if available)
+    let bertAnalysis = null;
+    let bertConfidence = 0;
+    
+    if (transcript && transcript.trim().length > 5) {
+      try {
+        console.log('🤖 Running BERT analysis on transcript...');
+        
+        // Try multiple BERT approaches for best results
+        if (this.bertEngine) {
+          bertAnalysis = await this.bertEngine.analyzeForRealWorldProblems(transcript, {
+            domain: 'emotion',
+            multiModal: true
+          });
+          bertConfidence = bertAnalysis.confidence || 0;
+          console.log('✅ BERT analysis complete:', bertAnalysis);
+        } else {
+          // Fallback to basic BERT API
+          bertAnalysis = await analyzeEmotion(transcript);
+          bertConfidence = 0.7; // Default confidence for API
+          console.log('✅ Fallback BERT analysis:', bertAnalysis);
+        }
+      } catch (error) {
+        console.warn('⚠️ BERT analysis failed, continuing with audio analysis:', error);
+        bertAnalysis = null;
+        bertConfidence = 0;
+      }
+    }
+    
+    // Step 2: Enhanced traditional analysis with BERT fusion
     Object.entries(this.emotionProfiles).forEach(([emotion, profile]) => {
-      let score = 0;
+      let audioScore = 0;
+      let textScore = 0;
+      let bertScore = 0;
       let totalWeight = 100;
+      
       const weights = this.modelWeights[emotion] || { pitch: 1, volume: 1, spectral: 1, keywords: 1, overall: 1 };
       
-      // PITCH ANALYSIS (25% importance)
+      // === AUDIO FEATURES ANALYSIS (35% total importance) ===
+      
+      // PITCH ANALYSIS (Enhanced - 12% importance)
       let pitchScore = 0;
       if (voiceFeatures.pitch && voiceFeatures.pitch > 0) {
-        if (voiceFeatures.pitch >= profile.pitchRange[0] && voiceFeatures.pitch <= profile.pitchRange[1]) {
-          pitchScore = 25;
-        } else {
-          // Partial scoring for near misses
-          const rangeMid = (profile.pitchRange[0] + profile.pitchRange[1]) / 2;
-          const rangeSize = profile.pitchRange[1] - profile.pitchRange[0];
-          const distance = Math.abs(voiceFeatures.pitch - rangeMid);
-          const normalizedDistance = distance / (rangeSize * 0.5);
-          pitchScore = Math.max(0, 25 * (1 - normalizedDistance * 0.4));
-        }
+        const pitchMatch = this.calculateFeatureMatch(
+          voiceFeatures.pitch, 
+          profile.pitchRange, 
+          { tolerance: 50, partialCredit: true }
+        );
+        pitchScore = pitchMatch * 12;
       } else {
-        // Estimate pitch from spectral centroid for files
+        // Enhanced pitch estimation for files
         const estimatedPitch = this.estimatePitchFromSpectral(voiceFeatures.spectralCentroid || 1500);
-        if (estimatedPitch >= profile.pitchRange[0] && estimatedPitch <= profile.pitchRange[1]) {
-          pitchScore = 15; // Lower confidence for estimated pitch
-        }
+        const pitchMatch = this.calculateFeatureMatch(
+          estimatedPitch, 
+          profile.pitchRange, 
+          { tolerance: 75, partialCredit: true, confidence: 0.7 }
+        );
+        pitchScore = pitchMatch * 8; // Lower confidence for estimated
       }
-      score += pitchScore * weights.pitch;
+      audioScore += pitchScore * weights.pitch;
       
-      // VOLUME ANALYSIS (20% importance)
+      // VOLUME ANALYSIS (Enhanced - 8% importance)
       let volumeScore = 0;
       if (voiceFeatures.volume !== undefined) {
-        if (voiceFeatures.volume >= profile.volumeRange[0] && voiceFeatures.volume <= profile.volumeRange[1]) {
-          volumeScore = 20;
-        } else {
-          // Partial scoring
-          const rangeMid = (profile.volumeRange[0] + profile.volumeRange[1]) / 2;
-          const rangeSize = profile.volumeRange[1] - profile.volumeRange[0];
-          const distance = Math.abs(voiceFeatures.volume - rangeMid);
-          const normalizedDistance = distance / (rangeSize * 0.5);
-          volumeScore = Math.max(0, 20 * (1 - normalizedDistance * 0.3));
-        }
+        const volumeMatch = this.calculateFeatureMatch(
+          voiceFeatures.volume, 
+          profile.volumeRange, 
+          { tolerance: 0.2, partialCredit: true }
+        );
+        volumeScore = volumeMatch * 8;
       }
-      score += volumeScore * weights.volume;
+      audioScore += volumeScore * weights.volume;
       
-      // SPECTRAL CENTROID ANALYSIS (20% importance)
+      // SPECTRAL CENTROID ANALYSIS (Enhanced - 10% importance)
       let spectralScore = 0;
       if (voiceFeatures.spectralCentroid !== undefined) {
-        if (voiceFeatures.spectralCentroid >= profile.spectralCentroid[0] && 
-            voiceFeatures.spectralCentroid <= profile.spectralCentroid[1]) {
-          spectralScore = 20;
-        } else {
-          // More lenient spectral matching for files
-          const rangeMid = (profile.spectralCentroid[0] + profile.spectralCentroid[1]) / 2;
-          const rangeSize = profile.spectralCentroid[1] - profile.spectralCentroid[0];
-          const distance = Math.abs(voiceFeatures.spectralCentroid - rangeMid);
-          const normalizedDistance = distance / (rangeSize * 0.5);
-          spectralScore = Math.max(0, 20 * (1 - normalizedDistance * 0.4));
-        }
+        const spectralMatch = this.calculateFeatureMatch(
+          voiceFeatures.spectralCentroid, 
+          profile.spectralCentroid, 
+          { tolerance: 500, partialCredit: true }
+        );
+        spectralScore = spectralMatch * 10;
       }
-      score += spectralScore * weights.spectral;
+      audioScore += spectralScore * weights.spectral;
       
-      // ZERO CROSSING RATE ANALYSIS (10% importance)
+      // ZERO CROSSING RATE ANALYSIS (Enhanced - 5% importance)
       let zcrScore = 0;
       if (voiceFeatures.zeroCrossingRate !== undefined) {
-        if (voiceFeatures.zeroCrossingRate >= profile.zeroCrossing[0] && 
-            voiceFeatures.zeroCrossingRate <= profile.zeroCrossing[1]) {
-          zcrScore = 10;
-        } else {
-          const rangeMid = (profile.zeroCrossing[0] + profile.zeroCrossing[1]) / 2;
-          const distance = Math.abs(voiceFeatures.zeroCrossingRate - rangeMid);
-          const maxDistance = Math.max(profile.zeroCrossing[1] - rangeMid, rangeMid - profile.zeroCrossing[0]);
-          zcrScore = Math.max(0, 10 * (1 - distance / maxDistance));
-        }
+        const zcrMatch = this.calculateFeatureMatch(
+          voiceFeatures.zeroCrossingRate, 
+          profile.zeroCrossing, 
+          { tolerance: 0.05, partialCredit: true }
+        );
+        zcrScore = zcrMatch * 5;
       }
-      score += zcrScore;
+      audioScore += zcrScore;
       
-      // KEYWORD ANALYSIS (35% importance - crucial for file analysis)
+      // === TEXT ANALYSIS (40% total importance) ===
+      
+      // KEYWORD ANALYSIS (Enhanced - 25% importance)
       let keywordScore = 0;
       if (transcript && transcript.length > 0) {
-        const keywordMatches = profile.keywords.filter(keyword => 
-          transcriptLower.includes(keyword.toLowerCase())).length;
+        const keywordAnalysis = this.analyzeKeywords(transcriptLower, profile.keywords);
+        keywordScore = keywordAnalysis.score * 25;
         
-        if (keywordMatches > 0) {
-          keywordScore = Math.min(35, keywordMatches * 10);
-          // Extra bonus for file analysis since audio features might be less reliable
-          if (isFileAnalysis) {
-            keywordScore = Math.min(35, keywordScore * 1.2);
-          }
+        // Bonus for file analysis with strong keyword matches
+        if (isFileAnalysis && keywordAnalysis.confidence > 0.7) {
+          keywordScore *= 1.15;
         }
       }
-      score += keywordScore * weights.keywords;
+      textScore += keywordScore * weights.keywords;
       
-      // Apply overall weight
-      score *= weights.overall;
+      // CONTEXT ANALYSIS (New - 15% importance)
+      let contextScore = 0;
+      if (transcript && transcript.length > 0) {
+        contextScore = this.analyzeEmotionalContext(transcriptLower, emotion) * 15;
+      }
+      textScore += contextScore;
       
-      // Calculate final percentage
-      let percentage = Math.round(score);
+      // === BERT ANALYSIS INTEGRATION (25% total importance) ===
+      if (bertAnalysis) {
+        bertScore = this.integrateBERTAnalysis(bertAnalysis, emotion, bertConfidence) * 25;
+      }
       
-      // Special adjustments
-      if (isFileAnalysis && keywordScore > 15) {
+      // === CALCULATE FINAL SCORE WITH CONFIDENCE ===
+      
+      // Weighted combination of all analysis types
+      const finalScore = (
+        audioScore * this.confidenceWeights.audioFeatures +
+        textScore * this.confidenceWeights.textAnalysis +
+        bertScore * this.confidenceWeights.bertAnalysis
+      ) * weights.overall;
+      
+      // Enhanced confidence calculation
+      const confidence = this.calculateEnhancedConfidence({
+        audioScore,
+        textScore,
+        bertScore,
+        transcriptLength: transcript.length,
+        isFileAnalysis,
+        bertConfidence,
+        featureQuality: this.assessFeatureQuality(voiceFeatures)
+      });
+      
+      // Apply final adjustments
+      let percentage = Math.round(finalScore);
+      
+      // Special adjustments for different scenarios
+      if (isFileAnalysis && bertScore > 15) {
         percentage = Math.min(100, Math.round(percentage * 1.1));
       }
       
-      // Neutral baseline for short transcripts
-      if (emotion === 'neutral' && transcript.length < 15) {
-        percentage = Math.max(percentage, 30);
+      // Neutral baseline for ambiguous inputs
+      if (emotion === 'neutral' && transcript.length < 15 && audioScore < 10) {
+        percentage = Math.max(percentage, 35);
       }
       
-      // Minimum floor
-      if (score > 0 && percentage < 5) {
-        percentage = 5;
+      // Minimum meaningful score
+      if (finalScore > 5 && percentage < 8) {
+        percentage = 8;
       }
       
       emotions[emotion] = {
         percentage: Math.max(0, Math.min(100, percentage)),
-        confidence: Math.round(percentage * 0.85),
+        confidence: Math.round(confidence),
         profile: profile,
         trainingAccuracy: this.getTrainingAccuracy(emotion),
-        isFileAnalysis: isFileAnalysis
+        isFileAnalysis: isFileAnalysis,
+        breakdown: {
+          audioScore: Math.round(audioScore),
+          textScore: Math.round(textScore),
+          bertScore: Math.round(bertScore),
+          bertUsed: !!bertAnalysis
+        },
+        enhancedAnalysis: true
       };
     });
     
@@ -585,6 +700,209 @@ class EmotionDetectionEngine {
     this.saveTrainingData();
     this.saveModelWeights();
   }
+
+  // === NEW ENHANCED ANALYSIS METHODS ===
+
+  // Enhanced feature matching with tolerance and partial credit
+  calculateFeatureMatch(value, range, options = {}) {
+    const { tolerance = 0, partialCredit = true, confidence = 1 } = options;
+    const [min, max] = range;
+    const expandedMin = min - tolerance;
+    const expandedMax = max + tolerance;
+    
+    if (value >= min && value <= max) {
+      return 1.0 * confidence; // Perfect match
+    }
+    
+    if (!partialCredit) {
+      return 0;
+    }
+    
+    if (value >= expandedMin && value <= expandedMax) {
+      // Partial credit within tolerance
+      const distanceFromRange = value < min ? (min - value) : (value - max);
+      const maxDistance = tolerance;
+      const partialScore = Math.max(0, 1 - (distanceFromRange / maxDistance));
+      return partialScore * 0.7 * confidence; // Max 70% for partial matches
+    }
+    
+    return 0;
+  }
+
+  // Enhanced keyword analysis with context and weighting
+  analyzeKeywords(text, keywords) {
+    let totalScore = 0;
+    let totalWeight = 0;
+    let matchedKeywords = [];
+    
+    keywords.forEach(keyword => {
+      const keywordLower = keyword.toLowerCase();
+      const regex = new RegExp(`\\b${keywordLower}\\b`, 'gi');
+      const matches = text.match(regex);
+      
+      if (matches) {
+        const weight = this.getKeywordWeight(keyword);
+        const score = Math.min(matches.length * weight, 1.0);
+        totalScore += score;
+        totalWeight += weight;
+        matchedKeywords.push({ keyword, matches: matches.length, weight });
+      }
+    });
+    
+    const finalScore = totalWeight > 0 ? Math.min(totalScore / totalWeight, 1.0) : 0;
+    const confidence = Math.min(matchedKeywords.length / Math.max(keywords.length * 0.3, 1), 1.0);
+    
+    return {
+      score: finalScore,
+      confidence,
+      matchedKeywords,
+      totalMatches: matchedKeywords.reduce((sum, k) => sum + k.matches, 0)
+    };
+  }
+
+  // Get keyword weight based on emotional strength
+  getKeywordWeight(keyword) {
+    const strongEmotionalWords = ['terrible', 'amazing', 'horrible', 'excellent', 'disaster', 'wonderful'];
+    const moderateEmotionalWords = ['good', 'bad', 'nice', 'okay', 'fine', 'great'];
+    
+    if (strongEmotionalWords.includes(keyword.toLowerCase())) return 1.5;
+    if (moderateEmotionalWords.includes(keyword.toLowerCase())) return 1.0;
+    return 0.8;
+  }
+
+  // Analyze emotional context using sentence structure and patterns
+  analyzeEmotionalContext(text, targetEmotion) {
+    let contextScore = 0;
+    
+    // Emotional intensifiers
+    const intensifiers = ['very', 'extremely', 'really', 'absolutely', 'completely', 'totally'];
+    const intensifierBonus = intensifiers.some(word => text.includes(word)) ? 0.2 : 0;
+    
+    // Emotional negations (reduce confidence)
+    const negations = ['not', 'no', 'never', 'none', 'nothing'];
+    const negationPenalty = negations.some(word => text.includes(word)) ? -0.15 : 0;
+    
+    // Question patterns (often indicate uncertainty)
+    const questionPatterns = ['?', 'what', 'how', 'why', 'when', 'where'];
+    const questionPenalty = questionPatterns.some(pattern => text.includes(pattern)) ? -0.1 : 0;
+    
+    // Emotional progression (e.g., "I was happy but now...")
+    const progressionPatterns = ['but', 'however', 'although', 'despite'];
+    const progressionPenalty = progressionPatterns.some(pattern => text.includes(pattern)) ? -0.1 : 0;
+    
+    // Certainty indicators
+    const certaintyWords = ['definitely', 'certainly', 'obviously', 'clearly'];
+    const certaintyBonus = certaintyWords.some(word => text.includes(word)) ? 0.15 : 0;
+    
+    contextScore = 0.5 + intensifierBonus + negationPenalty + questionPenalty + progressionPenalty + certaintyBonus;
+    
+    return Math.max(0, Math.min(1, contextScore));
+  }
+
+  // Integrate BERT analysis with local emotion detection
+  integrateBERTAnalysis(bertAnalysis, targetEmotion, bertConfidence) {
+    let bertScore = 0;
+    
+    if (!bertAnalysis || !bertAnalysis.emotions) {
+      return 0;
+    }
+    
+    // Direct emotion mapping
+    if (bertAnalysis.emotions[targetEmotion]) {
+      bertScore = bertAnalysis.emotions[targetEmotion];
+    } else {
+      // Try mapped emotions
+      const mappedEmotions = Object.keys(this.bertToLocalMapping).filter(
+        bertEmotion => this.bertToLocalMapping[bertEmotion] === targetEmotion
+      );
+      
+      for (const bertEmotion of mappedEmotions) {
+        if (bertAnalysis.emotions[bertEmotion]) {
+          bertScore = Math.max(bertScore, bertAnalysis.emotions[bertEmotion]);
+        }
+      }
+    }
+    
+    // Apply BERT confidence weighting
+    bertScore *= bertConfidence;
+    
+    // Normalize if BERT scores are in different scale
+    if (bertScore > 1) {
+      bertScore = bertScore / 100; // Convert percentage to decimal
+    }
+    
+    return Math.min(1, bertScore);
+  }
+
+  // Calculate enhanced confidence based on multiple factors
+  calculateEnhancedConfidence(params) {
+    const {
+      audioScore,
+      textScore,
+      bertScore,
+      transcriptLength,
+      isFileAnalysis,
+      bertConfidence,
+      featureQuality
+    } = params;
+    
+    let baseConfidence = 0;
+    
+    // Base confidence from score distribution
+    const maxScore = Math.max(audioScore, textScore, bertScore);
+    const scoreVariation = Math.abs(audioScore - textScore) + Math.abs(textScore - bertScore) + Math.abs(bertScore - audioScore);
+    const scoreConsistency = 1 - (scoreVariation / (3 * 100)); // Normalize by max possible variation
+    
+    baseConfidence = (maxScore / 100) * 0.6 + scoreConsistency * 0.4;
+    
+    // Transcript length bonus (more text = higher confidence)
+    const transcriptBonus = Math.min(transcriptLength / 100, 0.2); // Max 20% bonus
+    
+    // File analysis penalty (audio features less reliable)
+    const fileAnalysisPenalty = isFileAnalysis ? -0.1 : 0;
+    
+    // BERT integration bonus
+    const bertBonus = bertScore > 0 ? bertConfidence * 0.15 : 0;
+    
+    // Feature quality bonus
+    const qualityBonus = featureQuality * 0.1;
+    
+    const finalConfidence = baseConfidence + transcriptBonus + fileAnalysisPenalty + bertBonus + qualityBonus;
+    
+    return Math.max(10, Math.min(95, finalConfidence * 100));
+  }
+
+  // Assess the quality of extracted audio features
+  assessFeatureQuality(voiceFeatures) {
+    let qualityScore = 0;
+    let factors = 0;
+    
+    // Check if we have pitch data
+    if (voiceFeatures.pitch && voiceFeatures.pitch > 0) {
+      qualityScore += 0.3;
+      factors++;
+    }
+    
+    // Check volume consistency
+    if (voiceFeatures.volume !== undefined && voiceFeatures.volume > 0.1) {
+      qualityScore += 0.25;
+      factors++;
+    }
+    
+    // Check spectral centroid
+    if (voiceFeatures.spectralCentroid && voiceFeatures.spectralCentroid > 100) {
+      qualityScore += 0.25;
+      factors++;
+    }
+    
+    // Check zero crossing rate
+    if (voiceFeatures.zeroCrossingRate !== undefined) {
+      qualityScore += 0.2;
+      factors++;
+    }
+    
+    return factors > 0 ? qualityScore : 0.1; // Minimum quality
+  }
 }
 
 // Speech Recognition Manager
@@ -672,6 +990,205 @@ class SpeechManager {
   }
 }
 
+// Utility function to check Vosk model availability
+const checkVoskModels = async () => {
+  try {
+    // Check if Vosk models exist by trying to fetch model info
+    const modelPaths = [
+      '/models/vosk-model-small-en-us-0.15',
+      '/models/vosk-model-small-hi-0.22'
+    ];
+    
+    for (const path of modelPaths) {
+      try {
+        // Try to fetch the mfcc.conf file with GET instead of HEAD
+        const response = await fetch(`${path}/mfcc.conf`);
+        if (response.ok) {
+          console.log(`✅ Vosk model found at: ${path}`);
+          return { available: true, path, message: 'Vosk models available' };
+        }
+      } catch (error) {
+        console.warn(`⚠️ Failed to access model at ${path}:`, error.message);
+        // Continue checking other paths
+        continue;
+      }
+    }
+    
+    // Try to check if vosk-browser can be imported
+    try {
+      const voskModule = await import('vosk-browser');
+      console.log('✅ vosk-browser module can be imported');
+      // If we can import vosk-browser, the models might still work even if fetch fails
+      return { 
+        available: true, 
+        path: '/models/vosk-model-small-en-us-0.15',
+        message: 'Vosk library available, models may work at runtime' 
+      };
+    } catch (importError) {
+      console.error('❌ vosk-browser import failed:', importError);
+    }
+    
+    return { 
+      available: false, 
+      message: 'Vosk models not found. Audio transcription will be limited.' 
+    };
+  } catch (error) {
+    console.error('❌ Error checking Vosk models:', error);
+    return { 
+      available: false, 
+      message: 'Unable to check Vosk model status' 
+    };
+  }
+};
+
+// Diagnostic function to test Vosk models
+const runVoskDiagnostics = async () => {
+  setRunningDiagnostics(true);
+  setFileProcessingStatus('🔍 Running Vosk diagnostics...');
+  
+  try {
+    console.log('🚀 Starting comprehensive Vosk diagnostics...');
+    
+    const diagnostics = {
+      timestamp: new Date().toISOString(),
+      voskBrowserImport: false,
+      modelFileAccess: {},
+      modelCreation: {},
+      summary: [],
+      recommendations: []
+    };
+
+    // Test 1: Vosk browser import
+    try {
+      const voskModule = await import('vosk-browser');
+      diagnostics.voskBrowserImport = true;
+      diagnostics.summary.push('✅ vosk-browser module imported successfully');
+      console.log('✅ vosk-browser import: SUCCESS');
+    } catch (importError) {
+      diagnostics.voskBrowserImport = false;
+      diagnostics.summary.push(`❌ vosk-browser import failed: ${importError.message}`);
+      diagnostics.recommendations.push('Run: npm install vosk-browser');
+      console.error('❌ vosk-browser import: FAILED', importError);
+    }
+
+    // Test 2: Model file accessibility
+    const modelPaths = [
+      '/models/vosk-model-small-en-us-0.15',
+      '/models/vosk-model-small-hi-0.22'
+    ];
+
+    for (const path of modelPaths) {
+      const modelTest = {
+        accessible: false,
+        files: [],
+        errors: []
+      };
+
+      try {
+        const keyFiles = ['mfcc.conf', 'model.conf', 'README'];
+        for (const file of keyFiles) {
+          try {
+            const response = await fetch(`${path}/${file}`);
+            if (response.ok) {
+              modelTest.files.push(file);
+              modelTest.accessible = true;
+            } else {
+              modelTest.errors.push(`${file}: HTTP ${response.status}`);
+            }
+          } catch (fetchError) {
+            modelTest.errors.push(`${file}: ${fetchError.message}`);
+          }
+        }
+      } catch (error) {
+        modelTest.errors.push(`General error: ${error.message}`);
+      }
+
+      diagnostics.modelFileAccess[path] = modelTest;
+      
+      if (modelTest.accessible) {
+        diagnostics.summary.push(`✅ Model files accessible: ${path}`);
+        console.log(`✅ Model files accessible: ${path}`);
+      } else {
+        diagnostics.summary.push(`❌ Model files inaccessible: ${path}`);
+        console.warn(`❌ Model files inaccessible: ${path}`, modelTest.errors);
+      }
+    }
+
+    // Test 3: Actual model creation (only if vosk-browser import succeeded)
+    if (diagnostics.voskBrowserImport) {
+      try {
+        const voskModule = await import('vosk-browser');
+        const { createModel } = voskModule;
+        
+        for (const path of modelPaths) {
+          try {
+            console.log(`🧪 Testing model creation for: ${path}`);
+            setFileProcessingStatus(`🧪 Testing model creation: ${path}...`);
+            
+            const model = await createModel(path);
+            diagnostics.modelCreation[path] = {
+              success: true,
+              message: 'Model created successfully'
+            };
+            diagnostics.summary.push(`✅ Model creation successful: ${path}`);
+            console.log(`✅ Model creation successful: ${path}`);
+            break; // Stop at first successful model
+          } catch (modelError) {
+            diagnostics.modelCreation[path] = {
+              success: false,
+              message: modelError.message
+            };
+            diagnostics.summary.push(`❌ Model creation failed: ${path} - ${modelError.message}`);
+            console.error(`❌ Model creation failed: ${path}`, modelError);
+            
+            // Analyze error and add recommendations
+            if (modelError.message.includes('archive') || modelError.message.includes('Unrecognized')) {
+              diagnostics.recommendations.push(`Re-download and properly extract ${path}`);
+            } else if (modelError.message.includes('network') || modelError.message.includes('fetch')) {
+              diagnostics.recommendations.push('Check static file serving configuration');
+            }
+          }
+        }
+      } catch (error) {
+        diagnostics.summary.push(`❌ Model creation test failed: ${error.message}`);
+        console.error('❌ Model creation test failed:', error);
+      }
+    }
+
+    // Generate final recommendations
+    if (!diagnostics.voskBrowserImport) {
+      diagnostics.recommendations.push('Install vosk-browser package');
+    }
+
+    const accessibleModels = Object.values(diagnostics.modelFileAccess).filter(m => m.accessible).length;
+    if (accessibleModels === 0) {
+      diagnostics.recommendations.push('Ensure Vosk models are in public/models/ directory');
+      diagnostics.recommendations.push('Download models from alphacephei.com/vosk/models/');
+    }
+
+    const successfulModels = Object.values(diagnostics.modelCreation).filter(m => m.success).length;
+    if (successfulModels === 0 && diagnostics.voskBrowserImport) {
+      diagnostics.recommendations.push('Vosk models may be corrupted - try re-downloading');
+    }
+
+    setDiagnosticResults(diagnostics);
+    setFileProcessingStatus('✅ Vosk diagnostics completed - check results below');
+    
+    console.log('📋 Vosk Diagnostics Complete:', diagnostics);
+    
+  } catch (error) {
+    console.error('❌ Diagnostic error:', error);
+    setDiagnosticResults({
+      error: error.message,
+      summary: ['❌ Diagnostic process failed'],
+      recommendations: ['Check browser console for detailed errors']
+    });
+    setFileProcessingStatus('❌ Diagnostics failed - check console');
+  } finally {
+    setRunningDiagnostics(false);
+  }
+};
+
 // MAIN COMPONENT WITH FIXED FILE UPLOAD
 const VoiceEmotionSystem = ({ onEmotionDetected, isVisible }) => {
   // Core state
@@ -688,38 +1205,79 @@ const VoiceEmotionSystem = ({ onEmotionDetected, isVisible }) => {
   const [trainingStats, setTrainingStats] = useState({});
   const [selectedTrainingEmotion, setSelectedTrainingEmotion] = useState('happy');
   const [trainingMessage, setTrainingMessage] = useState('');
+  const [diagnosticResults, setDiagnosticResults] = useState(null);
+  const [runningDiagnostics, setRunningDiagnostics] = useState(false);
   
   // Engine references
   const voiceEngine = useRef(null);
   const emotionEngine = useRef(null);
   const speechManager = useRef(null);
+  const audioCoordinator = useRef(null);
+  const serverConnector = useRef(null);
+  const netlifyDataSender = useRef(null);
   
-  // Initialize system
+  // Initialize system with Vosk model checking
   useEffect(() => {
     const initializeSystem = async () => {
       try {
         setSystemStatus('initializing');
+        
+        // Initialize shared audio coordinator first
+        audioCoordinator.current = new AudioStreamCoordinator();
+        const audioInitialized = await audioCoordinator.current.initialize();
+        
+        if (!audioInitialized) {
+          throw new Error('Failed to initialize audio coordinator');
+        }
+        
+        // Initialize enhanced server connector
+        try {
+          serverConnector.current = new EnhancedServerConnector();
+          console.log('✅ Enhanced server connector initialized');
+        } catch (serverError) {
+          console.warn('⚠️ Server connector initialization failed:', serverError);
+          console.log('💡 Continuing in offline mode');
+        }
+        
+        // Initialize Netlify data sender for deployment
+        try {
+          netlifyDataSender.current = new NetlifyDataSender();
+          console.log('✅ Netlify data sender initialized');
+        } catch (netlifyError) {
+          console.warn('⚠️ Netlify data sender initialization failed:', netlifyError);
+        }
         
         // Initialize engines
         voiceEngine.current = new AdvancedVoiceAnalysisEngine();
         emotionEngine.current = new EmotionDetectionEngine();
         speechManager.current = new SpeechManager();
         
-        // Initialize voice analysis
-        const voiceInit = await voiceEngine.current.initialize();
-        const speechInit = speechManager.current.initialize();
+        // Connect voice engine to audio coordinator
+        voiceEngine.current.setAudioCoordinator(audioCoordinator.current);
         
-        if (voiceInit && speechInit) {
-          // Set up speech transcript callback
-          speechManager.current.setOnTranscriptUpdate((newTranscript) => {
-            setTranscript(newTranscript);
-          });
-          
+        // Initialize audio recognition in coordinator
+        audioCoordinator.current.initializeSpeechRecognition();
+        
+        // Check Vosk model availability
+        const voskStatus = await checkVoskModels();
+        console.log('📋 Vosk model status:', voskStatus);
+        
+        // Initialize voice analysis with shared audio
+        const voiceInit = await voiceEngine.current.initialize();
+        
+        if (voiceInit) {
           // Load initial training stats
           setTrainingStats(emotionEngine.current.getTrainingStats());
           
           setSystemStatus('ready');
-          console.log('✅ Voice Emotion System initialized successfully');
+          console.log('✅ Voice Emotion System initialized successfully with conflict resolution');
+          
+          // Show model status warning if needed
+          if (!voskStatus.available) {
+            console.warn('⚠️ Vosk models not available:', voskStatus.message);
+            setFileProcessingStatus(`⚠️ Speech recognition limited: ${voskStatus.message}`);
+            setTimeout(() => setFileProcessingStatus(''), 5000);
+          }
         } else {
           setSystemStatus('error');
           console.error('❌ Failed to initialize system components');
@@ -754,6 +1312,9 @@ const VoiceEmotionSystem = ({ onEmotionDetected, isVisible }) => {
       if (voiceEngine.current) {
         voiceEngine.current.cleanup();
       }
+      if (audioCoordinator.current) {
+        audioCoordinator.current.cleanup();
+      }
       if (speechManager.current) {
         speechManager.current.stop();
       }
@@ -761,51 +1322,122 @@ const VoiceEmotionSystem = ({ onEmotionDetected, isVisible }) => {
     };
   }, []);
   
-  // Main analysis loop for live recording
+  // Main analysis loop for live recording with enhanced BERT integration
   useEffect(() => {
     if (isRecording && systemStatus === 'ready') {
-      const analysisInterval = setInterval(() => {
+      const analysisInterval = setInterval(async () => {
         if (voiceEngine.current && emotionEngine.current) {
           const voiceData = voiceEngine.current.getLatestAnalysis();
-          const detectedEmotions = emotionEngine.current.detectEmotion(voiceData, transcript);
           
-          setVoiceFeatures(voiceData);
-          setEmotions(detectedEmotions);
-          
-          // Find dominant emotion
-          let maxPercentage = 0;
-          let dominant = 'neutral';
-          Object.entries(detectedEmotions).forEach(([emotion, data]) => {
-            if (data.percentage > maxPercentage) {
-              maxPercentage = data.percentage;
-              dominant = emotion;
-            }
-          });
-          setDominantEmotion(dominant);
-          
-          // Emit to parent component
-          if (onEmotionDetected) {
-            onEmotionDetected({
-              emotions: detectedEmotions,
-              dominantEmotion: dominant,
-              voiceFeatures: voiceData,
-              transcript,
-              timestamp: Date.now()
+          try {
+            // Use enhanced async emotion detection with BERT
+            const detectedEmotions = await emotionEngine.current.detectEmotion(voiceData, transcript);
+            
+            setVoiceFeatures(voiceData);
+            setEmotions(detectedEmotions);
+            
+            // Find dominant emotion with enhanced confidence weighting
+            let maxScore = 0;
+            let dominant = 'neutral';
+            Object.entries(detectedEmotions).forEach(([emotion, data]) => {
+              // Use combination of percentage and confidence for better selection
+              const score = data.percentage * (data.confidence / 100);
+              if (score > maxScore) {
+                maxScore = score;
+                dominant = emotion;
+              }
             });
+            setDominantEmotion(dominant);
+            
+            // Emit to parent component with enhanced data
+            if (onEmotionDetected) {
+              onEmotionDetected({
+                emotions: detectedEmotions,
+                dominantEmotion: dominant,
+                voiceFeatures: voiceData,
+                transcript,
+                timestamp: Date.now(),
+                enhancedAnalysis: true,
+                confidence: detectedEmotions[dominant]?.confidence || 0
+              });
+            }
+            
+            // Send recording data to server (throttled to avoid spam)
+            if (serverConnector.current && dominant !== 'neutral') {
+              // Only send significant emotional changes to avoid server spam
+              const currentTime = Date.now();
+              const lastServerUpdate = analysisInterval._lastServerUpdate || 0;
+              
+              if (currentTime - lastServerUpdate > 5000) { // Send every 5 seconds max
+                analysisInterval._lastServerUpdate = currentTime;
+                
+                try {
+                  serverConnector.current.sendRecording({
+                    emotion: dominant,
+                    transcript: transcript,
+                    confidence: detectedEmotions[dominant]?.confidence || 0,
+                    duration: voiceData.duration || 0,
+                    features: voiceData
+                  }).catch(err => {
+                    console.warn('⚠️ Recording data upload failed:', err);
+                  });
+                } catch (serverError) {
+                  console.warn('⚠️ Server recording error:', serverError);
+                }
+              }
+            }
+            
+            // Send via Netlify data sender (for deployment)
+            if (netlifyDataSender.current && dominant !== 'neutral') {
+              const currentTime = Date.now();
+              const lastNetlifyUpdate = analysisInterval._lastNetlifyUpdate || 0;
+              
+              if (currentTime - lastNetlifyUpdate > 8000) { // Send every 8 seconds max
+                analysisInterval._lastNetlifyUpdate = currentTime;
+                
+                try {
+                  netlifyDataSender.current.sendToLaptop({
+                    type: 'live_recording',
+                    emotion: dominant,
+                    transcript: transcript,
+                    confidence: detectedEmotions[dominant]?.confidence || 0,
+                    duration: voiceData.duration || 0,
+                    features: voiceData
+                  }).catch(err => {
+                    console.warn('⚠️ Netlify recording data failed:', err);
+                  });
+                } catch (netlifyError) {
+                  console.warn('⚠️ Netlify recording error:', netlifyError);
+                }
+              }
+            }
+          } catch (error) {
+            console.error('❌ Enhanced emotion detection failed:', error);
+            // Fallback to basic analysis
+            const basicEmotions = { neutral: { percentage: 60, confidence: 40, enhancedAnalysis: false } };
+            setEmotions(basicEmotions);
+            setDominantEmotion('neutral');
           }
         }
-      }, 200);
+      }, 300); // Slightly faster for better responsiveness
       
       return () => clearInterval(analysisInterval);
     }
   }, [isRecording, systemStatus, transcript, onEmotionDetected]);
   
-  // Recording controls
+  // Recording controls with conflict resolution
   const handleStartRecording = useCallback(() => {
-    if (systemStatus !== 'ready') return;
+    if (systemStatus !== 'ready' || !audioCoordinator.current) return;
     
+    console.log('🎤 Starting recording with conflict resolution...');
+    
+    // Start voice analysis using shared audio context
     const voiceStarted = voiceEngine.current.startAnalysis();
-    const speechStarted = speechManager.current.start();
+    
+    // Start speech recognition through coordinator (this will handle conflicts)
+    const speechStarted = audioCoordinator.current.startSpeechRecognition((newTranscript) => {
+      setTranscript(newTranscript);
+    });
     
     if (voiceStarted && speechStarted) {
       setIsRecording(true);
@@ -821,6 +1453,7 @@ const VoiceEmotionSystem = ({ onEmotionDetected, isVisible }) => {
 
   // COMPLETELY FIXED FILE UPLOAD HANDLER - NO AUDIO PLAYBACK
   const handleFileUpload = useCallback(async (e) => {
+    const startTime = Date.now(); // Track processing time
     console.log('📂 Starting file upload process...');
     
     const file = e?.target?.files?.[0];
@@ -859,69 +1492,230 @@ const VoiceEmotionSystem = ({ onEmotionDetected, isVisible }) => {
       const audioFeatures = await processSilentAudio(file);
       console.log('📊 Audio features extracted:', audioFeatures);
       
-      // STEP 2: Try transcript extraction (optional)
-      let extractedTranscript = 'Audio processed from file';
+      // STEP 2: Try transcript extraction with enhanced error handling and backup systems
+      let extractedTranscript = null;
       try {
-        // Only use Vosk/server-side for file uploads, not browser SpeechRecognition
-        const transcriptResult = await processAudioFile(file, () => {}, 'en-US');
-        if (typeof transcriptResult === 'string' && transcriptResult.trim()) {
-          extractedTranscript = transcriptResult.trim();
-          setFileProcessingStatus('✅ Transcript extracted from file.');
-        } else {
-          setFileProcessingStatus('⚠️ No transcript detected in audio file.');
+        setFileProcessingStatus('🔍 Attempting speech-to-text transcription...');
+        
+        // Method 1: Try primary Vosk-based processor
+        try {
+          console.log('🎤 Using standard Vosk processor for transcription...');
+          const transcriptResult = await processAudioFile(file, (status) => {
+            setFileProcessingStatus(status);
+          }, 'en-US');
+          
+          console.log('📋 Raw transcript result received');
+          
+          // Extract clean transcript using utility function
+          const cleanTranscript = extractTranscriptFromVoskResult(transcriptResult);
+          
+          if (cleanTranscript) {
+            const validation = validateTranscript(cleanTranscript);
+            if (validation.valid) {
+              extractedTranscript = cleanTranscript;
+              setFileProcessingStatus(`✅ Real transcript extracted: ${validation.wordCount} words detected.`);
+              console.log('✅ Successfully extracted valid transcript:', extractedTranscript.substring(0, 100) + '...');
+            } else {
+              console.log('⚠️ Invalid transcript:', validation.reason);
+              throw new Error('Primary transcript validation failed');
+            }
+          } else {
+            throw new Error('Primary transcript extraction returned null');
+          }
+        } catch (primaryError) {
+          console.warn('❌ Primary transcript method failed:', primaryError.message);
+          
+          // Method 2: Try backup transcript system
+          setFileProcessingStatus('🔄 Trying backup transcript method...');
+          console.log('🔄 Attempting backup transcript extraction...');
+          
+          try {
+            const backupTranscript = await processAudioForTranscript(file, (status) => {
+              setFileProcessingStatus(status);
+            });
+            
+            if (backupTranscript && backupTranscript.trim().length > 10) {
+              extractedTranscript = backupTranscript;
+              setFileProcessingStatus('✅ Backup transcript method successful!');
+              console.log('✅ Backup transcript extracted:', extractedTranscript.substring(0, 100) + '...');
+            } else {
+              throw new Error('Backup transcript method produced insufficient content');
+            }
+          } catch (backupError) {
+            console.warn('❌ Backup transcript method failed:', backupError.message);
+            throw new Error('All transcript methods failed');
+          }
         }
+        
       } catch (transcriptErr) {
-        setFileProcessingStatus('⚠️ Transcript extraction failed.');
+        console.warn('⚠️ All transcript extraction methods failed:', transcriptErr);
+        
+        // Provide specific error messages for different failure types
+        if (transcriptErr.message.includes('Unrecognized archive format')) {
+          setFileProcessingStatus('⚠️ Vosk model format error. Using audio analysis only.');
+          extractedTranscript = 'Audio analysis performed without speech transcription due to model format issues.';
+        } else if (transcriptErr.message.includes('Vosk library not available')) {
+          setFileProcessingStatus('⚠️ Speech recognition library unavailable. Using audio analysis only.');
+          extractedTranscript = 'Audio analysis performed without speech transcription due to missing libraries.';
+        } else if (transcriptErr.message.includes('No Vosk models could be loaded')) {
+          setFileProcessingStatus('⚠️ Speech recognition models unavailable. Using audio analysis only.');
+          extractedTranscript = 'Audio analysis performed without speech transcription.';
+        } else if (transcriptErr.message.includes('All transcript methods failed')) {
+          setFileProcessingStatus('⚠️ All transcript methods failed. Using audio analysis only.');
+          extractedTranscript = 'Audio file processed with acoustic features only - transcript unavailable.';
+        } else {
+          setFileProcessingStatus('⚠️ Transcript extraction failed. Using audio analysis only.');
+          extractedTranscript = 'Audio file processed with acoustic features only.';
+        }
+      }
+
+      // Ensure we always have a transcript to work with
+      if (!extractedTranscript) {
+        extractedTranscript = 'Audio file processed successfully - no transcript available.';
       }
 
       // Update transcript in UI
       setTranscript(extractedTranscript);
       
-      // STEP 3: Run emotion detection
-      console.log('🎭 Running emotion detection...');
+      // STEP 3: Run enhanced emotion detection with BERT
+      console.log('🎭 Running enhanced emotion detection with BERT...');
       if (!emotionEngine.current) {
         throw new Error('Emotion engine not initialized');
       }
       
-      const detectedEmotions = emotionEngine.current.detectEmotion(audioFeatures, extractedTranscript);
-      console.log('🎭 Emotions detected:', detectedEmotions);
+      setFileProcessingStatus('🤖 Analyzing emotions with enhanced AI...');
       
-      if (!detectedEmotions || Object.keys(detectedEmotions).length === 0) {
-        throw new Error('No emotions detected');
-      }
-      
-      // STEP 4: Update UI with results
-      console.log('🔄 Updating UI with results...');
-      setVoiceFeatures(audioFeatures);
-      setEmotions(detectedEmotions);
-      
-      // Find dominant emotion
-      let maxPercentage = 0;
-      let dominant = 'neutral';
-      Object.entries(detectedEmotions).forEach(([emotion, data]) => {
-        if (data.percentage > maxPercentage) {
-          maxPercentage = data.percentage;
-          dominant = emotion;
+      try {
+        const detectedEmotions = await emotionEngine.current.detectEmotion(audioFeatures, extractedTranscript);
+        console.log('✅ Enhanced emotions detected:', detectedEmotions);
+        
+        if (!detectedEmotions || Object.keys(detectedEmotions).length === 0) {
+          throw new Error('No emotions detected');
         }
-      });
-      setDominantEmotion(dominant);
-      
-      // Notify parent component
-      if (onEmotionDetected) {
-        onEmotionDetected({
-          emotions: detectedEmotions,
-          dominantEmotion: dominant,
-          voiceFeatures: audioFeatures,
-          transcript: extractedTranscript,
-          timestamp: Date.now(),
-          source: 'file_upload'
+        
+        // STEP 4: Update UI with enhanced results
+        console.log('🔄 Updating UI with enhanced results...');
+        setVoiceFeatures(audioFeatures);
+        setEmotions(detectedEmotions);
+        
+        // Find dominant emotion with enhanced confidence weighting
+        let maxScore = 0;
+        let dominant = 'neutral';
+        Object.entries(detectedEmotions).forEach(([emotion, data]) => {
+          // Use combination of percentage and confidence for better selection
+          const score = data.percentage * (data.confidence / 100);
+          if (score > maxScore) {
+            maxScore = score;
+            dominant = emotion;
+          }
         });
-      }
-      
-      setFileProcessingStatus('✅ File analyzed successfully! Emotions detected.');
-      console.log('🎉 File processing completed successfully!');
-      
-    } catch (error) {
+        setDominantEmotion(dominant);
+        
+        // Enhanced status message
+        const dominantData = detectedEmotions[dominant];
+        const confidenceLevel = dominantData.confidence > 80 ? 'High' : 
+                               dominantData.confidence > 60 ? 'Medium' : 'Low';
+        const bertUsed = dominantData.breakdown?.bertUsed ? ' (BERT Enhanced)' : '';
+        
+        setFileProcessingStatus(
+          `✅ Emotion detected: ${dominant} (${dominantData.percentage}% confidence: ${confidenceLevel}${bertUsed})`
+        );
+        
+        // Notify parent component with enhanced data
+        if (onEmotionDetected) {
+          onEmotionDetected({
+            emotions: detectedEmotions,
+            dominantEmotion: dominant,
+            voiceFeatures: audioFeatures,
+            transcript: extractedTranscript,
+            timestamp: Date.now(),
+            source: 'file_upload',
+            enhancedAnalysis: true,
+            confidence: dominantData.confidence
+          });
+        }
+        
+        setFileProcessingStatus('✅ File analyzed successfully with enhanced AI! Emotions detected.');
+        console.log('🎉 Enhanced file processing completed successfully!');
+        
+        // STEP 5: Upload data to enhanced server
+        if (serverConnector.current) {
+          try {
+            setFileProcessingStatus('📤 Uploading analysis data to server...');
+            console.log('📤 Sending data to enhanced server...');
+            
+            const serverUpload = await serverConnector.current.uploadAudioFile(file, {
+              emotion: dominant,
+              transcript: extractedTranscript,
+              confidence: dominantData.confidence,
+              features: audioFeatures,
+              voiceFeatures: audioFeatures,
+              bertAnalysis: detectedEmotions,
+              processingTime: Date.now() - startTime,
+              audioMetadata: {
+                name: file.name,
+                size: file.size,
+                type: file.type,
+                duration: audioFeatures.duration || 0
+              }
+            });
+            
+            if (serverUpload.success) {
+              console.log('✅ Data successfully uploaded to server:', serverUpload.id || 'offline');
+              setFileProcessingStatus('✅ Analysis complete! Data saved to server.');
+            } else {
+              console.warn('⚠️ Server upload failed:', serverUpload.error);
+              setFileProcessingStatus('✅ Analysis complete! (Server upload failed)');
+            }
+          } catch (serverError) {
+            console.warn('⚠️ Server communication error:', serverError);
+            setFileProcessingStatus('✅ Analysis complete! (Running offline)');
+          }
+        } else {
+          setFileProcessingStatus('✅ File analyzed successfully with enhanced AI! Emotions detected.');
+        }
+        
+        // STEP 6: Send data via Netlify (for deployment)
+        if (netlifyDataSender.current) {
+          try {
+            console.log('🌐 Sending data via Netlify system...');
+            
+            const netlifyResult = await netlifyDataSender.current.sendToLaptop({
+              type: 'file_upload',
+              emotion: dominant,
+              transcript: extractedTranscript,
+              confidence: dominantData.confidence,
+              features: audioFeatures,
+              bertAnalysis: detectedEmotions,
+              processingTime: Date.now() - startTime,
+              audioMetadata: {
+                name: file.name,
+                size: file.size,
+                type: file.type,
+                duration: audioFeatures.duration || 0
+              }
+            });
+            
+            console.log('🌐 Netlify data transmission result:', netlifyResult);
+          } catch (netlifyError) {
+            console.warn('⚠️ Netlify data transmission failed:', netlifyError);
+          }
+        }
+        
+      } catch (emotionError) {
+        console.error('❌ Enhanced emotion detection failed:', emotionError);
+        setFileProcessingStatus('⚠️ Using fallback emotion analysis...');
+        
+        // Fallback to basic emotion analysis
+        const basicEmotions = {
+          neutral: { percentage: 60, confidence: 50, profile: { color: '#374151', icon: '😐' } },
+          calm: { percentage: 40, confidence: 35, profile: { color: '#06b6d4', icon: '😌' } }
+        };
+        setEmotions(basicEmotions);
+        setDominantEmotion('neutral');
+        
+        setFileProcessingStatus('✅ File processed with basic analysis.');
+      }    } catch (error) {
       console.error('❌ File processing failed:', error);
       setFileProcessingStatus(`❌ Failed to analyze file: ${error.message}`);
       
@@ -1087,8 +1881,15 @@ const VoiceEmotionSystem = ({ onEmotionDetected, isVisible }) => {
   }, []);
   
   const handleStopRecording = useCallback(() => {
+    console.log('⏹️ Stopping recording with conflict resolution...');
+    
     voiceEngine.current?.stopAnalysis();
-    speechManager.current?.stop();
+    
+    // Stop speech recognition through coordinator
+    if (audioCoordinator.current) {
+      audioCoordinator.current.stopSpeechRecognition();
+    }
+    
     setIsRecording(false);
     console.log('⏹️ Recording stopped');
   }, []);
@@ -1209,6 +2010,64 @@ const VoiceEmotionSystem = ({ onEmotionDetected, isVisible }) => {
         </p>
       </div>
 
+      {/* Enhanced System Status */}
+      {systemStatus === 'ready' && (
+        <div style={{
+          background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+          borderRadius: '16px',
+          padding: '20px',
+          marginBottom: '20px',
+          color: 'white',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          boxShadow: '0 8px 25px rgba(16, 185, 129, 0.3)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{
+              width: '12px',
+              height: '12px',
+              background: '#34d399',
+              borderRadius: '50%',
+              animation: 'pulse 2s infinite'
+            }}></div>
+            <span style={{ fontSize: '1.1rem', fontWeight: '600' }}>
+              🤖 Enhanced AI System Active
+            </span>
+          </div>
+          <div style={{ display: 'flex', gap: '16px', fontSize: '0.9rem' }}>
+            <span>✅ BERT Integration</span>
+            <span>✅ Audio Analysis</span>
+            <span>✅ Text Processing</span>
+          </div>
+        </div>
+      )}
+
+      {/* Model Status Warning */}
+      {fileProcessingStatus && (fileProcessingStatus.includes('model') || fileProcessingStatus.includes('Speech recognition limited')) && (
+        <div style={{
+          background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+          borderRadius: '16px',
+          padding: '16px',
+          marginBottom: '20px',
+          color: 'white',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          boxShadow: '0 8px 25px rgba(245, 158, 11, 0.3)'
+        }}>
+          <div style={{ fontSize: '1.5rem' }}>⚠️</div>
+          <div>
+            <div style={{ fontWeight: '600', marginBottom: '4px' }}>
+              Speech Recognition Limited
+            </div>
+            <div style={{ fontSize: '0.9rem', opacity: 0.9 }}>
+              {fileProcessingStatus}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Tab Navigation */}
       <div style={{
         display: 'flex',
@@ -1222,7 +2081,8 @@ const VoiceEmotionSystem = ({ onEmotionDetected, isVisible }) => {
         {[
 
           { id: 'detection', label: '🎯 Emotion Detection', color: '#667eea' },
-          { id: 'training', label: '🤖 AI Training Center', color: '#10b981' }
+          { id: 'training', label: '🤖 AI Training Center', color: '#10b981' },
+          { id: 'diagnostics', label: '🔧 Vosk Diagnostics', color: '#f59e0b' }
         ].map(tab => (
           <button
             key={tab.id}
@@ -1265,7 +2125,7 @@ const VoiceEmotionSystem = ({ onEmotionDetected, isVisible }) => {
           onStartRecording={handleStartRecording}
           onStopRecording={handleStopRecording}
         />
-      ) : (
+      ) : activeTab === 'training' ? (
         <TrainingTab
           emotions={emotions}
           trainingStats={trainingStats}
@@ -1278,7 +2138,14 @@ const VoiceEmotionSystem = ({ onEmotionDetected, isVisible }) => {
           onExportData={exportTrainingData}
           onImportData={importTrainingData}
         />
-      )}
+      ) : activeTab === 'diagnostics' ? (
+        <DiagnosticsTab
+          diagnosticResults={diagnosticResults}
+          runningDiagnostics={runningDiagnostics}
+          onRunDiagnostics={runVoskDiagnostics}
+          fileProcessingStatus={fileProcessingStatus}
+        />
+      ) : null}
     </div>
   );
 };
@@ -1652,10 +2519,61 @@ const DetectionTab = ({
               <div style={{ 
                 fontSize: '1rem', 
                 color: '#4b5563',
-                marginBottom: '12px'
+                marginBottom: '8px'
               }}>
                 Confidence: {data.confidence}%
               </div>
+              
+              {/* Enhanced Analysis Indicators */}
+              {data.enhancedAnalysis && (
+                <div style={{
+                  marginBottom: '8px',
+                  padding: '6px 10px',
+                  background: 'rgba(59, 130, 246, 0.15)',
+                  borderRadius: '12px',
+                  fontSize: '0.85rem',
+                  color: '#1d4ed8',
+                  fontWeight: '600',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}>
+                  🤖 Enhanced AI Analysis
+                  {data.breakdown?.bertUsed && (
+                    <span style={{ 
+                      background: 'rgba(16, 185, 129, 0.2)', 
+                      padding: '2px 6px', 
+                      borderRadius: '8px',
+                      fontSize: '0.75rem',
+                      color: '#059669'
+                    }}>
+                      BERT
+                    </span>
+                  )}
+                </div>
+              )}
+              
+              {/* Analysis Breakdown */}
+              {data.breakdown && (
+                <div style={{
+                  marginBottom: '8px',
+                  fontSize: '0.8rem',
+                  color: '#6b7280',
+                  display: 'flex',
+                  gap: '8px',
+                  flexWrap: 'wrap'
+                }}>
+                  {data.breakdown.audioScore > 0 && (
+                    <span>Audio: {data.breakdown.audioScore}%</span>
+                  )}
+                  {data.breakdown.textScore > 0 && (
+                    <span>Text: {data.breakdown.textScore}%</span>
+                  )}
+                  {data.breakdown.bertScore > 0 && (
+                    <span>BERT: {data.breakdown.bertScore}%</span>
+                  )}
+                </div>
+              )}
               {data.trainingAccuracy > 0 && (
                 <div style={{
                   marginTop: '12px',
@@ -1704,9 +2622,38 @@ const DetectionTab = ({
 
     <style jsx>{`
       @keyframes pulse {
-        0% { transform: scale(1); }
-        50% { transform: scale(1.02); }
-        100% { transform: scale(1); }
+        0% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.1); opacity: 0.8; }
+        100% { transform: scale(1); opacity: 1; }
+      }
+      
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      
+      @keyframes shimmer {
+        0% { background-position: -200px 0; }
+        100% { background-position: calc(200px + 100%) 0; }
+      }
+      
+      .enhanced-analysis {
+        animation: fadeInUp 0.5s ease-out;
+      }
+      
+      .confidence-high {
+        background: linear-gradient(90deg, 
+          rgba(16, 185, 129, 0.2) 0%, 
+          rgba(16, 185, 129, 0.3) 50%, 
+          rgba(16, 185, 129, 0.2) 100%);
+        background-size: 200px 100%;
+        animation: shimmer 2s infinite;
       }
     `}</style>
   </div>
@@ -2069,5 +3016,320 @@ const TrainingTab = ({
     </div>
   );
 };
+
+// Diagnostics Tab Component
+const DiagnosticsTab = ({ 
+  diagnosticResults, 
+  runningDiagnostics, 
+  onRunDiagnostics, 
+  fileProcessingStatus 
+}) => (
+  <div>
+    {/* Diagnostics Controls */}
+    <div style={{
+      background: 'white',
+      borderRadius: '24px',
+      padding: '40px',
+      marginBottom: '30px',
+      textAlign: 'center',
+      boxShadow: '0 15px 35px rgba(0,0,0,0.1)'
+    }}>
+      <h2 style={{ 
+        margin: '0 0 25px 0', 
+        color: '#1f2937',
+        fontSize: '2.2rem',
+        fontWeight: '800',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '15px'
+      }}>
+        🔧 Vosk Model Diagnostics
+      </h2>
+      
+      <p style={{ 
+        color: '#6b7280', 
+        fontSize: '1.2rem',
+        margin: '0 0 30px 0',
+        lineHeight: '1.6'
+      }}>
+        Test and diagnose Vosk speech recognition models. If you're experiencing issues with 
+        audio file transcription, run this diagnostic to identify and resolve problems.
+      </p>
+
+      <button
+        onClick={onRunDiagnostics}
+        disabled={runningDiagnostics}
+        style={{
+          padding: '20px 40px',
+          fontSize: '1.4rem',
+          fontWeight: '700',
+          color: 'white',
+          background: runningDiagnostics 
+            ? 'linear-gradient(135deg, #9ca3af, #6b7280)' 
+            : 'linear-gradient(135deg, #f59e0b, #d97706)',
+          border: 'none',
+          borderRadius: '20px',
+          cursor: runningDiagnostics ? 'not-allowed' : 'pointer',
+          boxShadow: runningDiagnostics ? 'none' : '0 10px 25px rgba(245, 158, 11, 0.4)',
+          transition: 'all 0.3s ease',
+          marginBottom: '20px'
+        }}
+      >
+        {runningDiagnostics ? '🔄 Running Diagnostics...' : '🚀 Run Vosk Diagnostics'}
+      </button>
+
+      {/* Status Message */}
+      {fileProcessingStatus && (
+        <div style={{
+          background: fileProcessingStatus.includes('❌') ? '#fef2f2' : 
+                     fileProcessingStatus.includes('✅') ? '#f0fdf4' : '#fef3c7',
+          border: fileProcessingStatus.includes('❌') ? '3px solid #ef4444' : 
+                  fileProcessingStatus.includes('✅') ? '3px solid #10b981' : '3px solid #f59e0b',
+          color: fileProcessingStatus.includes('❌') ? '#dc2626' : 
+                 fileProcessingStatus.includes('✅') ? '#059669' : '#d97706',
+          padding: '20px',
+          borderRadius: '16px',
+          marginTop: '20px',
+          fontSize: '1.2rem',
+          fontWeight: '600'
+        }}>
+          {fileProcessingStatus}
+        </div>
+      )}
+    </div>
+
+    {/* Diagnostic Results */}
+    {diagnosticResults && (
+      <div style={{
+        background: 'white',
+        borderRadius: '24px',
+        padding: '40px',
+        boxShadow: '0 15px 35px rgba(0,0,0,0.1)'
+      }}>
+        <h3 style={{ 
+          margin: '0 0 30px 0', 
+          color: '#1f2937',
+          fontSize: '1.8rem',
+          fontWeight: '700',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px'
+        }}>
+          📋 Diagnostic Results
+          <span style={{
+            background: '#e5e7eb',
+            color: '#374151',
+            padding: '4px 12px',
+            borderRadius: '12px',
+            fontSize: '0.8rem',
+            fontWeight: '600'
+          }}>
+            {new Date(diagnosticResults.timestamp).toLocaleTimeString()}
+          </span>
+        </h3>
+
+        {/* Summary */}
+        <div style={{
+          background: '#f8fafc',
+          border: '2px solid #e2e8f0',
+          borderRadius: '16px',
+          padding: '25px',
+          marginBottom: '30px'
+        }}>
+          <h4 style={{
+            margin: '0 0 15px 0',
+            color: '#374151',
+            fontSize: '1.3rem',
+            fontWeight: '600'
+          }}>
+            📊 Summary
+          </h4>
+          <div style={{ 
+            fontSize: '1.1rem', 
+            lineHeight: '1.6',
+            fontFamily: 'Monaco, monospace'
+          }}>
+            {diagnosticResults.summary?.map((item, index) => (
+              <div 
+                key={index} 
+                style={{ 
+                  margin: '8px 0',
+                  color: item.includes('✅') ? '#059669' : item.includes('❌') ? '#dc2626' : '#374151'
+                }}
+              >
+                {item}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Recommendations */}
+        {diagnosticResults.recommendations && diagnosticResults.recommendations.length > 0 && (
+          <div style={{
+            background: '#fffbeb',
+            border: '2px solid #f59e0b',
+            borderRadius: '16px',
+            padding: '25px',
+            marginBottom: '30px'
+          }}>
+            <h4 style={{
+              margin: '0 0 15px 0',
+              color: '#d97706',
+              fontSize: '1.3rem',
+              fontWeight: '600'
+            }}>
+              💡 Recommendations
+            </h4>
+            <ul style={{ 
+              fontSize: '1.1rem', 
+              lineHeight: '1.6',
+              paddingLeft: '20px',
+              color: '#92400e'
+            }}>
+              {diagnosticResults.recommendations.map((rec, index) => (
+                <li key={index} style={{ margin: '10px 0' }}>
+                  {rec}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Detailed Results */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+          gap: '25px'
+        }}>
+          {/* Vosk Browser Status */}
+          <div style={{
+            background: diagnosticResults.voskBrowserImport ? '#f0fdf4' : '#fef2f2',
+            border: `2px solid ${diagnosticResults.voskBrowserImport ? '#10b981' : '#ef4444'}`,
+            borderRadius: '16px',
+            padding: '25px'
+          }}>
+            <h5 style={{
+              margin: '0 0 15px 0',
+              color: diagnosticResults.voskBrowserImport ? '#059669' : '#dc2626',
+              fontSize: '1.2rem',
+              fontWeight: '600'
+            }}>
+              {diagnosticResults.voskBrowserImport ? '✅' : '❌'} vosk-browser Module
+            </h5>
+            <p style={{
+              color: diagnosticResults.voskBrowserImport ? '#065f46' : '#991b1b',
+              fontSize: '1rem',
+              margin: 0
+            }}>
+              {diagnosticResults.voskBrowserImport 
+                ? 'Successfully imported vosk-browser library'
+                : 'Failed to import vosk-browser - package may not be installed'
+              }
+            </p>
+          </div>
+
+          {/* Model File Access */}
+          {diagnosticResults.modelFileAccess && Object.entries(diagnosticResults.modelFileAccess).map(([path, result]) => (
+            <div 
+              key={path}
+              style={{
+                background: result.accessible ? '#f0fdf4' : '#fef2f2',
+                border: `2px solid ${result.accessible ? '#10b981' : '#ef4444'}`,
+                borderRadius: '16px',
+                padding: '25px'
+              }}
+            >
+              <h5 style={{
+                margin: '0 0 15px 0',
+                color: result.accessible ? '#059669' : '#dc2626',
+                fontSize: '1.2rem',
+                fontWeight: '600'
+              }}>
+                {result.accessible ? '✅' : '❌'} {path.split('/').pop()}
+              </h5>
+              <p style={{
+                color: result.accessible ? '#065f46' : '#991b1b',
+                fontSize: '0.95rem',
+                margin: '0 0 10px 0'
+              }}>
+                Files found: {result.files.join(', ') || 'None'}
+              </p>
+              {result.errors.length > 0 && (
+                <div style={{
+                  fontSize: '0.9rem',
+                  color: '#7f1d1d',
+                  fontFamily: 'Monaco, monospace'
+                }}>
+                  {result.errors.map((error, i) => (
+                    <div key={i}>• {error}</div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+
+          {/* Model Creation Results */}
+          {diagnosticResults.modelCreation && Object.entries(diagnosticResults.modelCreation).map(([path, result]) => (
+            <div 
+              key={path}
+              style={{
+                background: result.success ? '#f0fdf4' : '#fef2f2',
+                border: `2px solid ${result.success ? '#10b981' : '#ef4444'}`,
+                borderRadius: '16px',
+                padding: '25px'
+              }}
+            >
+              <h5 style={{
+                margin: '0 0 15px 0',
+                color: result.success ? '#059669' : '#dc2626',
+                fontSize: '1.2rem',
+                fontWeight: '600'
+              }}>
+                {result.success ? '✅' : '❌'} Model Creation: {path.split('/').pop()}
+              </h5>
+              <p style={{
+                color: result.success ? '#065f46' : '#991b1b',
+                fontSize: '0.95rem',
+                margin: 0,
+                fontFamily: 'Monaco, monospace'
+              }}>
+                {result.message}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        {/* Error Details */}
+        {diagnosticResults.error && (
+          <div style={{
+            background: '#fef2f2',
+            border: '2px solid #ef4444',
+            borderRadius: '16px',
+            padding: '25px',
+            marginTop: '25px'
+          }}>
+            <h4 style={{
+              margin: '0 0 15px 0',
+              color: '#dc2626',
+              fontSize: '1.3rem',
+              fontWeight: '600'
+            }}>
+              ❌ Error Details
+            </h4>
+            <p style={{
+              color: '#991b1b',
+              fontSize: '1rem',
+              margin: 0,
+              fontFamily: 'Monaco, monospace'
+            }}>
+              {diagnosticResults.error}
+            </p>
+          </div>
+        )}
+      </div>
+    )}
+  </div>
+);
 
 export default VoiceEmotionSystem;

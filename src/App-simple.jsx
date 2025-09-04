@@ -1,10 +1,14 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import './App-simple.css';
-import { processFile } from './utils/fileProcessors';
+import { processAudioFileV3, enhancedAudioProcessorV3 } from './utils/enhancedAudioProcessorV3';
 import { runVoskDiagnostics } from './utils/voskDiagnostics';
+import { getBlockedRequests } from './utils/comprehensiveVoskBlocker';
 import { translateToEnglish, detectLanguage, getLanguageName, needsTranslation } from './utils/translator';
 import { correctGrammar, needsGrammarCorrection } from './utils/grammarCorrector';
-import EmotionDetectionEngine from './utils/emotionDetectionEngine';
+// Enhanced emotion detection imports
+import { EnhancedEmotionEngine } from './utils/enhancedEmotionEngine';
+import { analyzeEmotionWithEnhancedBERT } from './utils/enhancedBertAnalyzer';
+import EnhancedVoiceEmotionAnalyzer from './utils/enhancedVoiceEmotionAnalyzer2';
 // Step 4 imports - Advanced Emotion Analytics
 import EmotionDetectionIntegration from './components/EmotionDetectionIntegration';
 import TranscriptAnalysis from './components/TranscriptAnalysis';
@@ -30,7 +34,7 @@ import BERTSummaryInsights from './components/BERTSummaryInsights';
 // Training Center
 import TrainingCenter from './components/TrainingCenter';
 // Enhanced Voice Emotion Analyzer
-import EnhancedVoiceEmotionAnalyzer from './components/EnhancedVoiceEmotionAnalyzer';
+import EnhancedVoiceEmotionAnalyzerComponent from './components/EnhancedVoiceEmotionAnalyzer';
 
 function App() { 
   // --- BEAUTIFUL UI STATE ---
@@ -38,6 +42,26 @@ function App() {
   const [analysisHistory, setAnalysisHistory] = useState([]);
   const [viewedAnalysis, setViewedAnalysis] = useState(null);
   const [historyLoaded, setHistoryLoaded] = useState(false);
+  
+  // --- ENHANCED EMOTION DETECTION STATE ---
+  const [emotionEngine] = useState(() => new EnhancedEmotionEngine());
+  const [voiceEmotionAnalyzer] = useState(() => new EnhancedVoiceEmotionAnalyzer());
+  const [enhancedResults, setEnhancedResults] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [transcriptText, setTranscriptText] = useState('');
+  const [recognitionResults, setRecognitionResults] = useState([]);
+  const [error, setError] = useState('');
+  const [progressMessage, setProgressMessage] = useState('');
+  const [blockedRequests, setBlockedRequests] = useState([]);
+  
+  // --- REFS ---
+  const fileInputRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const recognizerRef = useRef(null);
+  const audioStreamRef = useRef(null);
+  const isProcessingRef = useRef(false);
+  const hasUnmountedRef = useRef(false);
 
   // Load history from localStorage on mount (ensure all fields are restored, add debug log)
   useEffect(() => {
@@ -82,8 +106,10 @@ function App() {
                 {[
                   { id: 'upload', label: '📁 Upload', color: '#667eea' },
                   { id: 'analysis', label: '📊 Analysis', color: '#10b981' },
+                  { id: 'enhanced', label: '🧠 Enhanced AI', color: '#8b5cf6' },
                   { id: 'history', label: '🕒 History', color: '#f59e0b' },
-                  { id: 'training', label: '🤖 Training', color: '#764ba2' }
+                  { id: 'training', label: '🤖 Training', color: '#764ba2' },
+                  { id: 'diagnostics', label: '🔧 VOSK DIAGNOSTICS HERE!', color: '#ff0000' }
                 ].map(tab => (
                   <button
                     key={tab.id}
@@ -158,6 +184,324 @@ function App() {
                       {/* ...existing analysis UI... */}
                       <h2 style={{ fontSize: '2rem', fontWeight: 800, color: '#10b981', marginBottom: 18 }}>Analysis Results</h2>
                       {/* Place your analysis results here */}
+                    </section>
+                  )}
+                  {activeTab === 'enhanced' && (
+                    <section style={{
+                      background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                      borderRadius: 24,
+                      boxShadow: '0 4px 24px rgba(139,92,246,0.15)',
+                      padding: '40px',
+                      marginBottom: 32,
+                      color: 'white'
+                    }}>
+                      <h2 style={{ 
+                        fontSize: '2.5rem', 
+                        fontWeight: 800, 
+                        color: 'white', 
+                        marginBottom: 18,
+                        textShadow: '2px 2px 4px rgba(0,0,0,0.3)'
+                      }}>
+                        🧠 Enhanced AI Emotion Analysis
+                      </h2>
+                      <p style={{ 
+                        fontSize: '1.3rem', 
+                        opacity: 0.9, 
+                        marginBottom: 30,
+                        lineHeight: 1.6
+                      }}>
+                        Advanced multi-modal emotion detection combining BERT NLP, voice analysis, and neural pattern recognition
+                      </p>
+
+                      {enhancedResults ? (
+                        <div style={{
+                          background: 'rgba(255,255,255,0.15)',
+                          borderRadius: '20px',
+                          padding: '30px',
+                          backdropFilter: 'blur(10px)',
+                          marginBottom: '25px'
+                        }}>
+                          <h3 style={{ 
+                            fontSize: '1.8rem', 
+                            marginBottom: '20px',
+                            color: '#ffd700',
+                            textShadow: '1px 1px 2px rgba(0,0,0,0.3)'
+                          }}>
+                            🎯 Multi-Modal Fusion Results
+                          </h3>
+                          
+                          {enhancedResults.fusedAnalysis && (
+                            <div style={{ marginBottom: '25px' }}>
+                              <h4 style={{ 
+                                fontSize: '1.3rem', 
+                                marginBottom: '15px',
+                                color: '#a7f3d0'
+                              }}>
+                                Neural Network Fusion Analysis
+                              </h4>
+                              <div style={{ 
+                                display: 'grid', 
+                                gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', 
+                                gap: '15px',
+                                marginBottom: '15px'
+                              }}>
+                                {Object.entries(enhancedResults.fusedAnalysis.emotions || {}).map(([emotion, score]) => (
+                                  <div key={emotion} style={{
+                                    background: 'linear-gradient(135deg, rgba(255,255,255,0.25), rgba(255,255,255,0.15))',
+                                    padding: '15px',
+                                    borderRadius: '12px',
+                                    textAlign: 'center',
+                                    border: '1px solid rgba(255,255,255,0.2)',
+                                    transform: score > 0.5 ? 'scale(1.05)' : 'scale(1)',
+                                    transition: 'transform 0.3s ease'
+                                  }}>
+                                    <div style={{ 
+                                      fontWeight: 'bold', 
+                                      textTransform: 'capitalize',
+                                      fontSize: '1.1rem',
+                                      marginBottom: '8px'
+                                    }}>
+                                      {emotion}
+                                    </div>
+                                    <div style={{ 
+                                      fontSize: '1.5rem', 
+                                      color: score > 0.5 ? '#ffd700' : '#fde68a',
+                                      fontWeight: 'bold'
+                                    }}>
+                                      {(score * 100).toFixed(1)}%
+                                    </div>
+                                    <div style={{
+                                      width: '100%',
+                                      height: '6px',
+                                      background: 'rgba(255,255,255,0.3)',
+                                      borderRadius: '3px',
+                                      marginTop: '8px',
+                                      overflow: 'hidden'
+                                    }}>
+                                      <div style={{
+                                        width: `${score * 100}%`,
+                                        height: '100%',
+                                        background: 'linear-gradient(90deg, #ffd700, #ffed4e)',
+                                        borderRadius: '3px',
+                                        transition: 'width 1s ease'
+                                      }}></div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                              
+                              <div style={{
+                                background: 'rgba(255,255,255,0.1)',
+                                padding: '15px',
+                                borderRadius: '10px',
+                                marginTop: '15px'
+                              }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                  <span style={{ fontSize: '1.1rem' }}>Overall Confidence:</span>
+                                  <span style={{ 
+                                    fontSize: '1.3rem', 
+                                    fontWeight: 'bold',
+                                    color: '#ffd700'
+                                  }}>
+                                    {((enhancedResults.fusedAnalysis.confidence || 0) * 100).toFixed(1)}%
+                                  </span>
+                                </div>
+                                <div style={{
+                                  width: '100%',
+                                  height: '8px',
+                                  background: 'rgba(255,255,255,0.3)',
+                                  borderRadius: '4px',
+                                  marginTop: '8px',
+                                  overflow: 'hidden'
+                                }}>
+                                  <div style={{
+                                    width: `${(enhancedResults.fusedAnalysis.confidence || 0) * 100}%`,
+                                    height: '100%',
+                                    background: 'linear-gradient(90deg, #10b981, #34d399)',
+                                    borderRadius: '4px',
+                                    transition: 'width 1.5s ease'
+                                  }}></div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          <div style={{ 
+                            display: 'grid', 
+                            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
+                            gap: '20px',
+                            marginTop: '25px'
+                          }}>
+                            {enhancedResults.bertAnalysis && (
+                              <div style={{
+                                background: 'rgba(16,185,129,0.2)',
+                                padding: '20px',
+                                borderRadius: '15px',
+                                border: '1px solid rgba(16,185,129,0.3)'
+                              }}>
+                                <h4 style={{ 
+                                  fontSize: '1.2rem', 
+                                  marginBottom: '10px',
+                                  color: '#6ee7b7'
+                                }}>
+                                  📝 Enhanced BERT Analysis
+                                </h4>
+                                <div style={{ fontSize: '1rem', lineHeight: 1.5 }}>
+                                  <div>Primary: <strong>{enhancedResults.bertAnalysis.primaryEmotion}</strong></div>
+                                  <div>Confidence: <strong>{((enhancedResults.bertAnalysis.confidence || 0) * 100).toFixed(1)}%</strong></div>
+                                  <div style={{ fontSize: '0.9rem', opacity: 0.8, marginTop: '8px' }}>
+                                    Strategy: Ensemble analysis with context windows
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {enhancedResults.voiceAnalysis && (
+                              <div style={{
+                                background: 'rgba(239,68,68,0.2)',
+                                padding: '20px',
+                                borderRadius: '15px',
+                                border: '1px solid rgba(239,68,68,0.3)'
+                              }}>
+                                <h4 style={{ 
+                                  fontSize: '1.2rem', 
+                                  marginBottom: '10px',
+                                  color: '#fca5a5'
+                                }}>
+                                  🔊 Voice Emotion Analysis
+                                </h4>
+                                <div style={{ fontSize: '1rem', lineHeight: 1.5 }}>
+                                  <div>Detected: <strong>{enhancedResults.voiceAnalysis.dominantEmotion}</strong></div>
+                                  <div style={{ fontSize: '0.9rem', opacity: 0.8, marginTop: '8px' }}>
+                                    Features: Pitch, Energy, Spectral Analysis
+                                  </div>
+                                  <div style={{ fontSize: '0.9rem', opacity: 0.8 }}>
+                                    Real-time acoustic processing
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          <div style={{ 
+                            marginTop: '25px',
+                            padding: '20px',
+                            background: 'rgba(255,255,255,0.1)',
+                            borderRadius: '15px',
+                            borderLeft: '4px solid #ffd700'
+                          }}>
+                            <h4 style={{ 
+                              fontSize: '1.2rem', 
+                              marginBottom: '10px',
+                              color: '#ffd700'
+                            }}>
+                              🔬 Technical Details
+                            </h4>
+                            <div style={{ 
+                              fontSize: '0.95rem', 
+                              lineHeight: 1.5,
+                              opacity: 0.9,
+                              display: 'grid',
+                              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                              gap: '10px'
+                            }}>
+                              <div>
+                                <strong>Fusion Weights:</strong><br />
+                                BERT: 35%, Voice: 30%<br />
+                                Patterns: 20%, Temporal: 15%
+                              </div>
+                              <div>
+                                <strong>Analysis Type:</strong><br />
+                                Multi-modal Neural Fusion<br />
+                                Real-time Processing
+                              </div>
+                              <div>
+                                <strong>Source:</strong><br />
+                                {enhancedResults.source}<br />
+                                {new Date(enhancedResults.timestamp).toLocaleTimeString()}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{
+                          background: 'rgba(255,255,255,0.15)',
+                          borderRadius: '20px',
+                          padding: '40px',
+                          textAlign: 'center',
+                          backdropFilter: 'blur(10px)'
+                        }}>
+                          <div style={{ fontSize: '4rem', marginBottom: '20px' }}>🎤</div>
+                          <h3 style={{ 
+                            fontSize: '1.8rem', 
+                            marginBottom: '15px',
+                            color: '#ffd700'
+                          }}>
+                            Ready for Enhanced Analysis
+                          </h3>
+                          <p style={{ 
+                            fontSize: '1.1rem',
+                            opacity: 0.9, 
+                            marginBottom: '25px',
+                            lineHeight: 1.6
+                          }}>
+                            Upload an audio file or enter text to experience our advanced<br />
+                            multi-modal emotion detection system in action
+                          </p>
+                          <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                            <button
+                              onClick={handleFileUpload}
+                              style={{
+                                background: 'linear-gradient(45deg, #ff6b6b, #ff8e8e)',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '15px',
+                                padding: '15px 30px',
+                                fontSize: '1.1rem',
+                                fontWeight: 'bold',
+                                cursor: 'pointer',
+                                boxShadow: '0 6px 20px rgba(255,107,107,0.4)',
+                                transition: 'all 0.3s ease'
+                              }}
+                              onMouseOver={(e) => {
+                                e.target.style.transform = 'translateY(-2px)';
+                                e.target.style.boxShadow = '0 8px 25px rgba(255,107,107,0.5)';
+                              }}
+                              onMouseOut={(e) => {
+                                e.target.style.transform = 'translateY(0)';
+                                e.target.style.boxShadow = '0 6px 20px rgba(255,107,107,0.4)';
+                              }}
+                            >
+                              📁 Upload Audio/Text
+                            </button>
+                            <button
+                              onClick={() => setActiveTab('upload')}
+                              style={{
+                                background: 'linear-gradient(45deg, #4ade80, #22d3ee)',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '15px',
+                                padding: '15px 30px',
+                                fontSize: '1.1rem',
+                                fontWeight: 'bold',
+                                cursor: 'pointer',
+                                boxShadow: '0 6px 20px rgba(74,222,128,0.4)',
+                                transition: 'all 0.3s ease'
+                              }}
+                              onMouseOver={(e) => {
+                                e.target.style.transform = 'translateY(-2px)';
+                                e.target.style.boxShadow = '0 8px 25px rgba(74,222,128,0.5)';
+                              }}
+                              onMouseOut={(e) => {
+                                e.target.style.transform = 'translateY(0)';
+                                e.target.style.boxShadow = '0 6px 20px rgba(74,222,128,0.4)';
+                              }}
+                            >
+                              🎙️ Try Upload Tab
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </section>
                   )}
                   {activeTab === 'history' && (
@@ -325,8 +669,6 @@ function App() {
   }, []);
   const [transcript, setTranscript] = useState('Exposure and training of students in fundamental concepts of sketching based visual representations. Hand sketching of general products (water bottle, mouse, laptop stand, mobile stand, travel bag, etc). Hand sketching of products of your discipline. Bio-inspired study (sketching of leaves, observation of bio-mimic structures etc). The students need to develop product prototypes / models using thermocol, wood and Plaster of Paris etc. Creative design on paper (Origami, Collage) with waste material. Digital design of various products (poster, scientific illustration, mind maps, empathy map etc). Design of any product using CAD software.');
   const [summary, setSummary] = useState('');
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [error, setError] = useState('');
   const [totalWords, setTotalWords] = useState(0);
   const [isListening, setIsListening] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState('en-US');
@@ -339,6 +681,7 @@ function App() {
   const [fileInfo, setFileInfo] = useState(null);
   const [processingStats, setProcessingStats] = useState(null);
   const [voskDiagnostics, setVoskDiagnostics] = useState(null);
+  const [runningDiagnostics, setRunningDiagnostics] = useState(false);
   const [isRunningDiagnostics, setIsRunningDiagnostics] = useState(false);
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [showVideoSuggestions, setShowVideoSuggestions] = useState(false);
@@ -369,7 +712,6 @@ function App() {
   const recognitionRef = useRef(null);
   const isRecognitionSupported = useRef(false);
   const finalTranscriptRef = useRef('');
-  const fileInputRef = useRef(null);
 
   // Enhanced language options with better support
   const languages = [
@@ -687,25 +1029,27 @@ function App() {
       // Process all supported content types (text, PDF, image, audio)
       setProcessingProgress('📄 Processing content...');
       
-      const extractedText = await processFile(
+      const extractedText = await processAudioFileV3(
         file,
         (progress) => {
           if (progress) {
             setProcessingProgress(progress);
           }
-        },
-        selectedLanguage,
-        { useVosk: true } // Use Vosk for audio processing
+        }
       );
 
       clearTimeout(timeoutId);
 
       let fileTranscript = '';
-      if (extractedText && typeof extractedText === 'object' && extractedText.audioTranscript) {
-        fileTranscript = extractedText.audioTranscript || extractedText.content || '';
+      // Handle the new V3 response format
+      if (extractedText && typeof extractedText === 'object') {
+        fileTranscript = extractedText.transcript || extractedText.audioTranscript || extractedText.content || '';
       } else {
-        fileTranscript = typeof extractedText === 'string' ? extractedText : extractedText?.content || '';
+        fileTranscript = typeof extractedText === 'string' ? extractedText : '';
       }
+
+      console.log('🎵 Audio processing result:', extractedText);
+      console.log('📝 Extracted transcript:', fileTranscript);
 
       // Check if we need to translate the extracted text
       if (fileTranscript && fileTranscript.length > 50) {
@@ -737,6 +1081,46 @@ function App() {
       setTotalWords(fileTranscript.split(/\s+/).filter(word => word.trim()).length);
       setProcessingProgress('✅ Content processed successfully!');
 
+      // Enhanced emotion analysis using new engines
+      if (fileTranscript && fileTranscript.trim()) {
+        setProcessingProgress('🧠 Running enhanced emotion analysis...');
+        
+        try {
+          // Run enhanced BERT analysis
+          const bertResults = await analyzeEmotionWithEnhancedBERT(fileTranscript);
+          
+          // If we have audio data, run voice emotion analysis
+          let voiceResults = null;
+          if (file.type.startsWith('audio/')) {
+            voiceResults = await voiceEmotionAnalyzer.processRecordedAudio(file);
+          }
+          
+          // Run multi-modal fusion analysis
+          const fusedResults = await emotionEngine.analyzeText(
+            fileTranscript,
+            {
+              bertResults,
+              voiceResults,
+              includeTemporalAnalysis: true,
+              includePatternRecognition: true
+            }
+          );
+          
+          setEnhancedResults({
+            fusedAnalysis: fusedResults,
+            bertAnalysis: bertResults,
+            voiceAnalysis: voiceResults,
+            timestamp: new Date().toISOString(),
+            source: 'file_upload'
+          });
+          
+          setProcessingProgress('🎯 Enhanced emotion analysis complete!');
+        } catch (emotionError) {
+          console.warn('Enhanced emotion analysis failed:', emotionError);
+          setProcessingProgress('⚠️ Basic analysis only - enhanced features unavailable');
+        }
+      }
+
       // Save to history (File Upload, always include all fields)
       if (fileTranscript.trim()) {
         const newEntry = {
@@ -745,7 +1129,7 @@ function App() {
           date: new Date().toISOString(),
           transcript: fileTranscript,
           summary: '',
-          analysis: null,
+          analysis: enhancedResults,
           chartData: null
         };
         addToAnalysisHistory(newEntry);
@@ -754,9 +1138,17 @@ function App() {
       event.target.value = '';
     } catch (error) {
       clearTimeout(timeoutId);
-      console.error('File processing error:', error);
+      console.error('🚨 File processing error:', error);
+      console.error('🔍 Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name,
+        fileName: file ? file.name : 'unknown',
+        fileType: file ? file.type : 'unknown'
+      });
+      
       setError(`Error processing file: ${error.message}`);
-      setProcessingProgress('❌ Processing failed');
+      setProcessingProgress(`❌ Processing failed: ${error.message}`);
     } finally {
       setIsProcessingFile(false);
       setTimeout(() => setProcessingProgress(''), 5000);
@@ -1451,10 +1843,10 @@ function App() {
 
       setVoskDiagnostics(diagnosticsResult);
       
-      if (diagnosticsResult.success) {
+      if (diagnosticsResult.overallStatus === 'success') {
         setProcessingProgress('✅ Vosk diagnostics completed successfully');
       } else {
-        setError(`Vosk diagnostics failed: ${diagnosticsResult.message}`);
+        setError(`Vosk diagnostics failed: ${diagnosticsResult.summary}`);
         setProcessingProgress('❌ Vosk diagnostics failed');
       }
     } catch (error) {
@@ -1465,6 +1857,91 @@ function App() {
       setIsRunningDiagnostics(false);
       setTimeout(() => setProcessingProgress(''), 3000);
     }
+  }, []);
+
+  // Test Audio Processor V3
+  const testAudioProcessorV3 = useCallback(async () => {
+    setIsRunningDiagnostics(true);
+    setError('');
+    setProcessingProgress('Testing Audio Processor V3...');
+
+    try {
+      // Initialize the processor
+      await enhancedAudioProcessorV3.initialize();
+      
+      // Get status
+      const status = enhancedAudioProcessorV3.getStatus();
+      console.log('Audio Processor V3 Status:', status);
+      
+      // Create a small test audio file (WAV format)
+      const sampleRate = 16000;
+      const duration = 2; // 2 seconds
+      const samples = sampleRate * duration;
+      const buffer = new ArrayBuffer(44 + samples * 2); // WAV header + data
+      const view = new DataView(buffer);
+      
+      // WAV header
+      const writeString = (offset, string) => {
+        for (let i = 0; i < string.length; i++) {
+          view.setUint8(offset + i, string.charCodeAt(i));
+        }
+      };
+      
+      writeString(0, 'RIFF');
+      view.setUint32(4, 36 + samples * 2, true);
+      writeString(8, 'WAVE');
+      writeString(12, 'fmt ');
+      view.setUint32(16, 16, true);
+      view.setUint16(20, 1, true);
+      view.setUint16(22, 1, true);
+      view.setUint32(24, sampleRate, true);
+      view.setUint32(28, sampleRate * 2, true);
+      view.setUint16(32, 2, true);
+      view.setUint16(34, 16, true);
+      writeString(36, 'data');
+      view.setUint32(40, samples * 2, true);
+      
+      // Add some test audio data (sine wave)
+      for (let i = 0; i < samples; i++) {
+        const sample = Math.sin(2 * Math.PI * 440 * i / sampleRate) * 0.3; // 440Hz tone
+        view.setInt16(44 + i * 2, sample * 0x7FFF, true);
+      }
+      
+      const testFile = new File([buffer], 'test-audio.wav', { type: 'audio/wav' });
+      
+      // Test transcription
+      const result = await enhancedAudioProcessorV3.processAudioFile(testFile);
+      
+      setProcessingProgress(`✅ Audio V3 Test Complete: ${result.transcript}`);
+      console.log('🎵 Audio V3 Test Result:', result);
+      
+    } catch (error) {
+      console.error('Audio V3 Test Error:', error);
+      setError(`Audio V3 Test failed: ${error.message}`);
+      setProcessingProgress('❌ Audio V3 Test failed');
+    } finally {
+      setIsRunningDiagnostics(false);
+      setTimeout(() => setProcessingProgress(''), 3000);
+    }
+  }, []);
+
+  // Show blocked requests
+  const showBlockedRequests = useCallback(async () => {
+    try {
+      const blockedRequests = getBlockedRequests();
+      console.log('Blocked Requests:', blockedRequests);
+      
+      if (blockedRequests.length === 0) {
+        setProcessingProgress('✅ No blocked requests found');
+      } else {
+        setProcessingProgress(`🚫 Found ${blockedRequests.length} blocked requests - check console`);
+      }
+    } catch (error) {
+      console.error('Error getting blocked requests:', error);
+      setProcessingProgress('❌ Error checking blocked requests');
+    }
+    
+    setTimeout(() => setProcessingProgress(''), 3000);
   }, []);
 
   // Enhanced download function with more details
@@ -2073,6 +2550,15 @@ function App() {
           >
             🎤 Voice Emotion
           </button>
+          
+          {/* VOSK DIAGNOSTICS TAB - BRIGHT AND PROMINENT */}
+          <button 
+            className={`tab ${activeTab === 'diagnostics' ? 'active' : ''}`}
+            style={{background: activeTab==='diagnostics' ? 'linear-gradient(90deg,#ff0000 60%,#cc0000 100%)' : '#ff0000', color: '#ffffff', border:'3px solid #ff0000',borderRadius:8,padding:'12px 20px',fontWeight:900,fontSize:'1.1em',boxShadow:'0 4px 16px rgba(255,0,0,0.4)',cursor:'pointer',transition:'all 0.2s',minWidth:'180px',textAlign:'center',textShadow:'1px 1px 2px rgba(0,0,0,0.5)',animation:'pulse 2s infinite'}}
+            onClick={() => setActiveTab('diagnostics')}
+          >
+            🔧 VOSK DIAGNOSTICS HERE!
+          </button>
         </div>
         <div className="content">
           {activeTab === 'speech' && (
@@ -2220,6 +2706,22 @@ function App() {
                   >
                     <span className="button-icon">🔍</span>
                     {isRunningDiagnostics ? 'Running...' : 'Test Vosk'}
+                  </button>
+                  <button
+                    className="control-button process"
+                    onClick={testAudioProcessorV3}
+                    disabled={isRunningDiagnostics}
+                  >
+                    <span className="button-icon">🎵</span>
+                    Test Audio V3
+                  </button>
+                  <button
+                    className="control-button process"
+                    onClick={showBlockedRequests}
+                    disabled={isRunningDiagnostics}
+                  >
+                    <span className="button-icon">🚫</span>
+                    Blocked Requests
                   </button>
                 </div>
               </div>
@@ -2944,7 +3446,508 @@ function App() {
         {/* Enhanced Voice Emotion Analyzer */}
         {activeTab === 'voiceemotion' && (
           <div className="tab-content">
-            <EnhancedVoiceEmotionAnalyzer />
+            <div style={{
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              borderRadius: '20px',
+              padding: '30px',
+              color: 'white',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+              marginBottom: '20px'
+            }}>
+              <h2 style={{
+                fontSize: '2.5rem',
+                fontWeight: 'bold',
+                marginBottom: '10px',
+                textShadow: '2px 2px 4px rgba(0,0,0,0.3)'
+              }}>
+                🎤 Enhanced Voice Emotion Analysis
+              </h2>
+              <p style={{
+                fontSize: '1.2rem',
+                opacity: 0.9,
+                marginBottom: '20px'
+              }}>
+                Advanced multi-modal emotion detection with BERT integration, voice analysis, and pattern recognition
+              </p>
+              
+              {enhancedResults && (
+                <div style={{
+                  background: 'rgba(255,255,255,0.15)',
+                  borderRadius: '15px',
+                  padding: '20px',
+                  marginTop: '20px',
+                  backdropFilter: 'blur(10px)'
+                }}>
+                  <h3 style={{ marginBottom: '15px', fontSize: '1.5rem' }}>
+                    🧠 Latest Enhanced Analysis Results
+                  </h3>
+                  
+                  {enhancedResults.fusedAnalysis && (
+                    <div style={{ marginBottom: '15px' }}>
+                      <h4>🎯 Multi-Modal Fusion Analysis:</h4>
+                      <div style={{ 
+                        display: 'grid', 
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+                        gap: '10px',
+                        marginTop: '10px'
+                      }}>
+                        {Object.entries(enhancedResults.fusedAnalysis.emotions || {}).map(([emotion, score]) => (
+                          <div key={emotion} style={{
+                            background: 'rgba(255,255,255,0.2)',
+                            padding: '10px',
+                            borderRadius: '8px',
+                            textAlign: 'center'
+                          }}>
+                            <div style={{ fontWeight: 'bold', textTransform: 'capitalize' }}>
+                              {emotion}
+                            </div>
+                            <div style={{ fontSize: '1.2rem', color: '#ffd700' }}>
+                              {(score * 100).toFixed(1)}%
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ marginTop: '10px', fontSize: '0.9rem', opacity: 0.8 }}>
+                        Confidence: {((enhancedResults.fusedAnalysis.confidence || 0) * 100).toFixed(1)}%
+                      </div>
+                    </div>
+                  )}
+                  
+                  {enhancedResults.bertAnalysis && (
+                    <div style={{ marginBottom: '15px' }}>
+                      <h4>📝 Enhanced BERT Analysis:</h4>
+                      <div style={{ fontSize: '0.9rem', opacity: 0.9 }}>
+                        Primary Emotion: <strong>{enhancedResults.bertAnalysis.primaryEmotion}</strong> 
+                        ({((enhancedResults.bertAnalysis.confidence || 0) * 100).toFixed(1)}%)
+                      </div>
+                    </div>
+                  )}
+                  
+                  {enhancedResults.voiceAnalysis && (
+                    <div style={{ marginBottom: '15px' }}>
+                      <h4>🔊 Voice Emotion Analysis:</h4>
+                      <div style={{ fontSize: '0.9rem', opacity: 0.9 }}>
+                        Detected: <strong>{enhancedResults.voiceAnalysis.dominantEmotion}</strong>
+                        <br />
+                        Features: Pitch, Energy, Spectral Analysis
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div style={{ 
+                    fontSize: '0.8rem', 
+                    opacity: 0.7, 
+                    marginTop: '15px',
+                    borderTop: '1px solid rgba(255,255,255,0.2)',
+                    paddingTop: '10px'
+                  }}>
+                    Analysis completed: {new Date(enhancedResults.timestamp).toLocaleString()}
+                  </div>
+                </div>
+              )}
+              
+              {!enhancedResults && (
+                <div style={{
+                  background: 'rgba(255,255,255,0.15)',
+                  borderRadius: '15px',
+                  padding: '20px',
+                  marginTop: '20px',
+                  textAlign: 'center',
+                  backdropFilter: 'blur(10px)'
+                }}>
+                  <h3 style={{ marginBottom: '10px' }}>📁 Upload or Record Audio</h3>
+                  <p style={{ opacity: 0.8, marginBottom: '15px' }}>
+                    Upload an audio file or record your voice to see enhanced emotion analysis in action
+                  </p>
+                  <button
+                    onClick={handleFileUpload}
+                    style={{
+                      background: 'linear-gradient(45deg, #ff6b6b, #ff8e8e)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '12px',
+                      padding: '12px 24px',
+                      fontSize: '1rem',
+                      fontWeight: 'bold',
+                      cursor: 'pointer',
+                      boxShadow: '0 4px 12px rgba(255,107,107,0.3)',
+                      transition: 'transform 0.2s'
+                    }}
+                    onMouseOver={(e) => e.target.style.transform = 'scale(1.05)'}
+                    onMouseOut={(e) => e.target.style.transform = 'scale(1)'}
+                  >
+                    📁 Upload Audio File
+                  </button>
+                  
+                  {/* Test Button for Generated Audio */}
+                  <button
+                    onClick={async () => {
+                      try {
+                        // Create a test audio file
+                        const sampleRate = 16000;
+                        const duration = 2; // 2 seconds
+                        const samples = sampleRate * duration;
+                        const buffer = new ArrayBuffer(44 + samples * 2);
+                        const view = new DataView(buffer);
+                        
+                        // WAV header
+                        const writeString = (offset, string) => {
+                          for (let i = 0; i < string.length; i++) {
+                            view.setUint8(offset + i, string.charCodeAt(i));
+                          }
+                        };
+                        
+                        writeString(0, 'RIFF');
+                        view.setUint32(4, 36 + samples * 2, true);
+                        writeString(8, 'WAVE');
+                        writeString(12, 'fmt ');
+                        view.setUint32(16, 16, true);
+                        view.setUint16(20, 1, true);
+                        view.setUint16(22, 1, true);
+                        view.setUint32(24, sampleRate, true);
+                        view.setUint32(28, sampleRate * 2, true);
+                        view.setUint16(32, 2, true);
+                        view.setUint16(34, 16, true);
+                        writeString(36, 'data');
+                        view.setUint32(40, samples * 2, true);
+                        
+                        // Generate test audio (sine wave)
+                        for (let i = 0; i < samples; i++) {
+                          const sample = Math.sin(2 * Math.PI * 440 * i / sampleRate) * 0.3;
+                          view.setInt16(44 + i * 2, sample * 0x7FFF, true);
+                        }
+                        
+                        const testFile = new File([buffer], 'test-audio.wav', { type: 'audio/wav' });
+                        
+                        // Process the test file
+                        setIsProcessingFile(true);
+                        const result = await processAudioFileV3(testFile);
+                        console.log('🎵 Test audio result:', result);
+                        
+                        if (result && result.transcript) {
+                          setTranscript(result.transcript);
+                          setProcessingProgress('✅ Test audio processed successfully!');
+                        }
+                      } catch (error) {
+                        console.error('Test audio error:', error);
+                        setError('Test failed: ' + error.message);
+                      } finally {
+                        setIsProcessingFile(false);
+                      }
+                    }}
+                    style={{
+                      background: 'linear-gradient(45deg, #10b981, #059669)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '12px',
+                      padding: '12px 24px',
+                      fontSize: '1rem',
+                      fontWeight: 'bold',
+                      cursor: 'pointer',
+                      boxShadow: '0 4px 12px rgba(16,185,129,0.3)',
+                      transition: 'transform 0.2s',
+                      marginLeft: '10px'
+                    }}
+                    onMouseOver={(e) => e.target.style.transform = 'scale(1.05)'}
+                    onMouseOut={(e) => e.target.style.transform = 'scale(1)'}
+                  >
+                    🧪 Test Generated Audio
+                  </button>
+                </div>
+              )}
+            </div>
+            
+            {/* Original Enhanced Voice Emotion Analyzer Component */}
+            <EnhancedVoiceEmotionAnalyzerComponent />
+          </div>
+        )}
+
+        {/* Vosk Diagnostics */}
+        {activeTab === 'diagnostics' && (
+          <div className="tab-content">
+            <div style={{
+              background: 'white',
+              borderRadius: '20px',
+              padding: '30px',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
+            }}>
+              <h2 style={{
+                color: '#1f2937',
+                fontSize: '2rem',
+                fontWeight: '700',
+                marginBottom: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
+              }}>
+                🔧 Vosk Model Diagnostics
+              </h2>
+              
+              <p style={{
+                color: '#6b7280',
+                fontSize: '1.1rem',
+                marginBottom: '25px',
+                lineHeight: '1.6'
+              }}>
+                Test your Vosk speech recognition models to identify and resolve issues with audio file transcription.
+              </p>
+
+              <button
+                onClick={async () => {
+                  setRunningDiagnostics(true);
+                  setProcessingProgress('🔍 Running Vosk diagnostics...');
+                  try {
+                    const diagnosticsResult = await runVoskDiagnostics(
+                      (progress) => setProcessingProgress(progress)
+                    );
+                    setVoskDiagnostics(diagnosticsResult);
+                    if (diagnosticsResult.overallStatus === 'success') {
+                      setProcessingProgress('✅ Vosk diagnostics completed successfully');
+                    } else {
+                      setError(`Vosk diagnostics failed: ${diagnosticsResult.summary}`);
+                      setProcessingProgress('❌ Vosk diagnostics failed');
+                    }
+                  } catch (error) {
+                    setError(`Diagnostics error: ${error.message}`);
+                    setProcessingProgress('❌ Diagnostics failed');
+                  } finally {
+                    setRunningDiagnostics(false);
+                  }
+                }}
+                disabled={runningDiagnostics}
+                style={{
+                  background: runningDiagnostics 
+                    ? 'linear-gradient(135deg, #9ca3af, #6b7280)' 
+                    : 'linear-gradient(135deg, #dc2626, #991b1b)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '12px',
+                  padding: '15px 30px',
+                  fontSize: '1.1rem',
+                  fontWeight: '600',
+                  cursor: runningDiagnostics ? 'not-allowed' : 'pointer',
+                  boxShadow: runningDiagnostics ? 'none' : '0 6px 20px rgba(220, 38, 38, 0.3)',
+                  transition: 'all 0.3s ease'
+                }}
+              >
+                {runningDiagnostics ? '🔄 Running Diagnostics...' : '🚀 Run Vosk Diagnostics'}
+              </button>
+
+              {/* Test Real Vosk Button */}
+              <button
+                onClick={async () => {
+                  setProcessingProgress('🔍 Testing real Vosk transcription...');
+                  try {
+                    // Import the tester
+                    const { testVoskAvailability, testModelLoading } = await import('./utils/voskTester.js');
+                    
+                    // Test Vosk availability
+                    const voskTest = await testVoskAvailability();
+                    if (voskTest.success) {
+                      setProcessingProgress('✅ Vosk library available - Testing model...');
+                      
+                      // Test model loading with extended timeout
+                      setProcessingProgress('⏳ Loading model (may take up to 60 seconds)...');
+                      const modelTest = await testModelLoading();
+                      if (modelTest.success) {
+                        setProcessingProgress('✅ Real Vosk model loaded successfully! You can now upload audio files for real transcription.');
+                      } else {
+                        setProcessingProgress(`❌ Model loading failed: ${modelTest.error}`);
+                      }
+                    } else {
+                      setProcessingProgress(`❌ Vosk library test failed: ${voskTest.error}`);
+                    }
+                  } catch (error) {
+                    setProcessingProgress(`❌ Real Vosk test failed: ${error.message}`);
+                  }
+                }}
+                style={{
+                  background: 'linear-gradient(135deg, #10b981, #059669)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '12px',
+                  padding: '15px 30px',
+                  fontSize: '1.1rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  boxShadow: '0 6px 20px rgba(16, 185, 129, 0.3)',
+                  transition: 'all 0.3s ease',
+                  marginLeft: '15px'
+                }}
+              >
+                🎤 Test Real Vosk
+              </button>
+
+              {/* Test Alternative Vosk Button */}
+              <button
+                onClick={async () => {
+                  setProcessingProgress('🔍 Testing alternative Vosk method...');
+                  try {
+                    const { alternativeVoskManager } = await import('./utils/alternativeVoskManager.js');
+                    
+                    await alternativeVoskManager.initialize((progress) => {
+                      setProcessingProgress(progress);
+                    });
+                    
+                    if (alternativeVoskManager.isReady) {
+                      setProcessingProgress('✅ Alternative Vosk method works! You can now upload audio files.');
+                    } else {
+                      setProcessingProgress('❌ Alternative Vosk method also failed');
+                    }
+                  } catch (error) {
+                    setProcessingProgress(`❌ Alternative Vosk test failed: ${error.message}`);
+                  }
+                }}
+                style={{
+                  background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '12px',
+                  padding: '15px 30px',
+                  fontSize: '1.1rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  boxShadow: '0 6px 20px rgba(139, 92, 246, 0.3)',
+                  transition: 'all 0.3s ease',
+                  marginLeft: '15px'
+                }}
+              >
+                🔧 Test Alternative
+              </button>
+
+              {/* Test Model Files Button */}
+              <button
+                onClick={async () => {
+                  setProcessingProgress('🔍 Testing model files accessibility...');
+                  try {
+                    const { testModelFiles } = await import('./utils/voskTester.js');
+                    const fileTest = await testModelFiles();
+                    
+                    if (fileTest.success) {
+                      const accessibleFiles = Object.entries(fileTest.results)
+                        .filter(([_, result]) => result.accessible).length;
+                      const totalFiles = Object.keys(fileTest.results).length;
+                      
+                      setProcessingProgress(`✅ Model files test complete: ${accessibleFiles}/${totalFiles} files accessible. Check console for details.`);
+                    } else {
+                      setProcessingProgress(`❌ Model files test failed: ${fileTest.error}`);
+                    }
+                  } catch (error) {
+                    setProcessingProgress(`❌ Model files test failed: ${error.message}`);
+                  }
+                }}
+                style={{
+                  background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '12px',
+                  padding: '15px 30px',
+                  fontSize: '1.1rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  boxShadow: '0 6px 20px rgba(59, 130, 246, 0.3)',
+                  transition: 'all 0.3s ease',
+                  marginLeft: '15px'
+                }}
+              >
+                📁 Test Model Files
+              </button>
+
+              {/* Progress Display */}
+              {processingProgress && (
+                <div style={{
+                  background: processingProgress.includes('❌') ? '#fef2f2' : 
+                             processingProgress.includes('✅') ? '#f0fdf4' : '#fef3c7',
+                  border: processingProgress.includes('❌') ? '2px solid #ef4444' : 
+                          processingProgress.includes('✅') ? '2px solid #10b981' : '2px solid #f59e0b',
+                  color: processingProgress.includes('❌') ? '#dc2626' : 
+                         processingProgress.includes('✅') ? '#059669' : '#d97706',
+                  padding: '15px',
+                  borderRadius: '12px',
+                  marginTop: '20px',
+                  fontSize: '1rem',
+                  fontWeight: '600'
+                }}>
+                  {processingProgress}
+                </div>
+              )}
+
+              {/* Vosk Diagnostics Display */}
+              {voskDiagnostics && (
+                <div style={{
+                  marginTop: '25px',
+                  background: '#f8fafc',
+                  borderRadius: '12px',
+                  padding: '20px',
+                  border: '2px solid #e2e8f0'
+                }}>
+                  <h3 style={{
+                    color: '#374151',
+                    fontSize: '1.4rem',
+                    fontWeight: '600',
+                    marginBottom: '15px'
+                  }}>
+                    🔍 Vosk Diagnostics Results
+                  </h3>
+                  
+                  <div style={{
+                    background: voskDiagnostics.overallStatus === 'success' ? '#f0fdf4' : '#fef2f2',
+                    border: `2px solid ${voskDiagnostics.overallStatus === 'success' ? '#10b981' : '#ef4444'}`,
+                    borderRadius: '8px',
+                    padding: '15px',
+                    marginBottom: '15px'
+                  }}>
+                    <span style={{
+                      fontSize: '1.5rem',
+                      marginRight: '10px'
+                    }}>
+                      {voskDiagnostics.overallStatus === 'success' ? '✅' : '❌'}
+                    </span>
+                    <span style={{
+                      color: voskDiagnostics.overallStatus === 'success' ? '#065f46' : '#991b1b',
+                      fontSize: '1.1rem',
+                      fontWeight: '600'
+                    }}>
+                      {voskDiagnostics.summary}
+                    </span>
+                  </div>
+                  
+                  {voskDiagnostics.tests && (
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+                      gap: '15px'
+                    }}>
+                      {voskDiagnostics.tests.map((test, index) => (
+                        <div 
+                          key={index}
+                          style={{
+                            background: test.status === 'success' ? '#f0fdf4' : test.status === 'warning' ? '#fef3c7' : '#fef2f2',
+                            border: `1px solid ${test.status === 'success' ? '#10b981' : test.status === 'warning' ? '#f59e0b' : '#ef4444'}`,
+                            borderRadius: '8px',
+                            padding: '12px'
+                          }}
+                        >
+                          <div style={{
+                            color: test.status === 'success' ? '#065f46' : test.status === 'warning' ? '#d97706' : '#991b1b',
+                            fontWeight: '600',
+                            marginBottom: '5px'
+                          }}>
+                            {test.status === 'success' ? '✅' : test.status === 'warning' ? '⚠️' : '❌'} {test.test}
+                          </div>
+                          <div style={{
+                            color: '#6b7280',
+                            fontSize: '0.9rem'
+                          }}>
+                            {test.message}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         )}
 

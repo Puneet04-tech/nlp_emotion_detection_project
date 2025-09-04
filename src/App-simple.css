@@ -5,6 +5,23 @@
   gap: 24px;
   margin-bottom: 32px;
 }
+
+/* VOSK Diagnostics Tab Animation */
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 4px 16px rgba(255,0,0,0.4);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 6px 24px rgba(255,0,0,0.6);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 4px 16px rgba(255,0,0,0.4);
+  }
+}
+
 .analysis-section-card {
   background: linear-gradient(135deg, #7daff1 0%, #06717f 100%);
   border-radius: 16px;

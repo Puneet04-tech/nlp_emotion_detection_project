@@ -1,53 +1,116 @@
-// Enhanced Voice Emotion Analyzer
-// Advanced voice emotion detection with 15 emotions and detailed analysis
-// Based on voice characteristics: tone, pitch, vocal texture, and volume
+// Enhanced Voice Emotion Analyzer with Mock Vosk Integration
+// Advanced voice emotion detection using acoustic features and mock speech recognition
+// Optimized for working with the mock Vosk system while providing real emotional insights
 
+import { mockVoskManager } from './mockVoskManager.js';
+import { EnhancedEmotionEngine } from './enhancedEmotionEngine.js';
+import { analyzeEmotionWithEnhancedBERT } from './enhancedBertAnalyzer.js';
+
+/**
+ * Enhanced Voice Emotion Analyzer
+ * Combines real audio analysis with mock speech recognition for comprehensive emotion detection
+ */
 export class EnhancedVoiceEmotionAnalyzer {
   constructor() {
     this.audioContext = null;
     this.analyser = null;
-    this.microphone = null;
-    this.isInitialized = false;
+    this.mediaRecorder = null;
+    this.stream = null;
+    this.isRecording = false;
     this.isAnalyzing = false;
     
-    // Enhanced emotion profiles based on vocal characteristics
-    this.emotionProfiles = {
-      anger: {
-        tone: 'harsh_biting',
-        pitch: { range: [150, 300], variability: 'high', tendency: 'rising' },
-        volume: { level: 'loud', variability: 'high' },
-        texture: 'tense',
-        intensity: 'high',
-        keywords: ['angry', 'furious', 'mad', 'irritated', 'outraged', 'annoyed'],
-        breathPattern: 'irregular',
-        articulationPattern: 'sharp'
+    // Enhanced emotion engine
+    this.emotionEngine = new EnhancedEmotionEngine();
+    
+    // Audio analysis settings
+    this.audioConfig = {
+      sampleRate: 44100,
+      fftSize: 2048,
+      smoothingTimeConstant: 0.8,
+      minDecibels: -90,
+      maxDecibels: -10
+    };
+    
+    // Voice feature extraction
+    this.voiceFeatures = {
+      pitch: [],
+      energy: [],
+      spectralCentroid: [],
+      zeroCrossingRate: [],
+      mfcc: [],
+      formants: [],
+      jitter: [],
+      shimmer: []
+    };
+    
+    // Real-time analysis state
+    this.analysisState = {
+      currentFeatures: {},
+      emotionHistory: [],
+      confidenceHistory: [],
+      realTimeResults: null,
+      processingQueue: []
+    };
+    
+    // Emotion-specific voice patterns (research-based)
+    this.voiceEmotionPatterns = {
+      joy: {
+        pitch: { mean: [180, 350], variance: [200, 800], trend: 'rising' },
+        energy: { mean: [0.4, 1.0], variance: [0.2, 0.6] },
+        spectralCentroid: { mean: [1000, 4000], variance: [500, 1500] },
+        speechRate: { multiplier: [1.1, 1.8] },
+        voiceQuality: { brightness: [0.6, 1.0], richness: [0.5, 0.9] }
       },
-      
-      happiness: {
-        tone: 'bright_lively',
-        pitch: { range: [160, 350], variability: 'high', tendency: 'upward' },
-        volume: { level: 'energetic', variability: 'moderate' },
-        texture: 'clear_resonant',
-        intensity: 'high',
-        keywords: ['happy', 'joyful', 'excited', 'wonderful', 'amazing', 'great'],
-        breathPattern: 'regular',
-        articulationPattern: 'clear'
-      },
-      
       sadness: {
-        tone: 'soft_flat',
-        pitch: { range: [80, 180], variability: 'low', tendency: 'downward' },
-        volume: { level: 'subdued', variability: 'low' },
-        texture: 'muffled',
-        intensity: 'low',
-        keywords: ['sad', 'depressed', 'down', 'disappointed', 'hurt', 'upset'],
-        breathPattern: 'shallow',
-        articulationPattern: 'unclear'
+        pitch: { mean: [80, 200], variance: [20, 150], trend: 'falling' },
+        energy: { mean: [0.05, 0.4], variance: [0.05, 0.3] },
+        spectralCentroid: { mean: [500, 2000], variance: [200, 800] },
+        speechRate: { multiplier: [0.4, 0.9] },
+        voiceQuality: { breathiness: [0.3, 1.0], darkness: [0.4, 0.9] }
       },
-      
+      anger: {
+        pitch: { mean: [150, 400], variance: [300, 1200], trend: 'irregular' },
+        energy: { mean: [0.6, 1.0], variance: [0.3, 0.8] },
+        spectralCentroid: { mean: [1500, 5000], variance: [800, 2000] },
+        speechRate: { multiplier: [0.8, 1.4] },
+        voiceQuality: { harshness: [0.4, 1.0], tension: [0.5, 1.0] }
+      },
+      fear: {
+        pitch: { mean: [200, 450], variance: [400, 1000], trend: 'trembling' },
+        energy: { mean: [0.2, 0.7], variance: [0.3, 0.8] },
+        spectralCentroid: { mean: [1200, 4500], variance: [600, 1800] },
+        speechRate: { multiplier: [1.2, 2.0] },
+        voiceQuality: { tremor: [0.3, 1.0], breathShortness: [0.4, 1.0] }
+      },
+      frustration: {
+        pitch: { mean: [120, 300], variance: [150, 600], trend: 'clipped' },
+        energy: { mean: [0.3, 0.8], variance: [0.2, 0.7] },
+        spectralCentroid: { mean: [800, 3500], variance: [400, 1200] },
+        speechRate: { multiplier: [0.7, 1.3] },
+        voiceQuality: { tenseness: [0.4, 1.0], effort: [0.3, 0.8] }
+      },
+      sarcasm: {
+        pitch: { mean: [100, 250], variance: [50, 200], trend: 'exaggerated' },
+        energy: { mean: [0.2, 0.6], variance: [0.1, 0.4] },
+        spectralCentroid: { mean: [600, 2500], variance: [300, 1000] },
+        speechRate: { multiplier: [0.6, 1.1] },
+        voiceQuality: { flatness: [0.4, 1.0], deliberateness: [0.5, 0.9] }
+      }
+    };
+    
+    // Analysis callbacks
+    this.callbacks = {
+      onEmotionDetected: null,
+      onVoiceFeaturesExtracted: null,
+      onTranscriptReceived: null,
+      onAnalysisComplete: null
+    };
+
+    // Emotion profiles for advanced analysis
+    this.emotionProfiles = {
       fear: {
         tone: 'tense_shaky',
-        pitch: { range: [180, 400], variability: 'very_high', tendency: 'tremulous' },
+        pitch: { range: [200, 450], variability: 'very_high', tendency: 'trembling' },
         volume: { level: 'variable', variability: 'very_high' },
         texture: 'thin_breathy',
         intensity: 'high',
@@ -55,7 +118,6 @@ export class EnhancedVoiceEmotionAnalyzer {
         breathPattern: 'rapid',
         articulationPattern: 'breathy'
       },
-      
       calm: {
         tone: 'relaxed_soothing',
         pitch: { range: [120, 220], variability: 'low', tendency: 'steady' },
@@ -66,7 +128,39 @@ export class EnhancedVoiceEmotionAnalyzer {
         breathPattern: 'deep',
         articulationPattern: 'smooth'
       },
-      
+    // End of constructor
+  
+    // Emotion profiles for advanced analysis
+    // (Move this into the constructor above, right after other property initializations)
+    // Voice feature extraction configuration
+    // (Move this into the constructor above)
+    // Real-time analysis data
+    // (Move this into the constructor above)
+    // Training data integration
+    // (Move this.loadTrainingWeights(); into the constructor above)
+  }
+    // Emotion profiles for advanced analysis
+    this.emotionProfiles = {
+      fear: {
+        tone: 'tense_shaky',
+        pitch: { range: [200, 450], variability: 'very_high', tendency: 'trembling' },
+        volume: { level: 'variable', variability: 'very_high' },
+        texture: 'thin_breathy',
+        intensity: 'high',
+        keywords: ['scared', 'afraid', 'worried', 'terrified', 'anxious', 'nervous'],
+        breathPattern: 'rapid',
+        articulationPattern: 'breathy'
+      },
+      calm: {
+        tone: 'relaxed_soothing',
+        pitch: { range: [120, 220], variability: 'low', tendency: 'steady' },
+        volume: { level: 'moderate', variability: 'low' },
+        texture: 'smooth',
+        intensity: 'low',
+        keywords: ['calm', 'peaceful', 'relaxed', 'serene', 'tranquil', 'content'],
+        breathPattern: 'deep',
+        articulationPattern: 'smooth'
+      },
       disgust: {
         tone: 'cold_contemptuous',
         pitch: { range: [100, 200], variability: 'moderate', tendency: 'sharp' },
@@ -77,7 +171,6 @@ export class EnhancedVoiceEmotionAnalyzer {
         breathPattern: 'controlled',
         articulationPattern: 'harsh'
       },
-      
       surprise: {
         tone: 'sudden_alert',
         pitch: { range: [200, 450], variability: 'very_high', tendency: 'rapidly_rising' },
@@ -88,7 +181,6 @@ export class EnhancedVoiceEmotionAnalyzer {
         breathPattern: 'sudden',
         articulationPattern: 'sharp'
       },
-      
       love: {
         tone: 'warm_affectionate',
         pitch: { range: [140, 280], variability: 'moderate', tendency: 'melodic' },
@@ -99,7 +191,6 @@ export class EnhancedVoiceEmotionAnalyzer {
         breathPattern: 'gentle',
         articulationPattern: 'soft'
       },
-      
       confusion: {
         tone: 'hesitant_uncertain',
         pitch: { range: [120, 250], variability: 'high', tendency: 'wavering' },
@@ -110,7 +201,6 @@ export class EnhancedVoiceEmotionAnalyzer {
         breathPattern: 'irregular',
         articulationPattern: 'hesitant'
       },
-      
       embarrassment: {
         tone: 'self_conscious_awkward',
         pitch: { range: [150, 300], variability: 'moderate', tendency: 'variable' },
@@ -121,7 +211,6 @@ export class EnhancedVoiceEmotionAnalyzer {
         breathPattern: 'shallow',
         articulationPattern: 'unclear'
       },
-      
       pride: {
         tone: 'assertive_confident',
         pitch: { range: [130, 250], variability: 'low', tendency: 'steady_high' },
@@ -132,7 +221,6 @@ export class EnhancedVoiceEmotionAnalyzer {
         breathPattern: 'controlled',
         articulationPattern: 'clear'
       },
-      
       contempt: {
         tone: 'sarcastic_dismissive',
         pitch: { range: [100, 180], variability: 'low', tendency: 'flat' },
@@ -143,7 +231,6 @@ export class EnhancedVoiceEmotionAnalyzer {
         breathPattern: 'controlled',
         articulationPattern: 'dismissive'
       },
-      
       shame: {
         tone: 'withdrawn_subdued',
         pitch: { range: [80, 150], variability: 'very_low', tendency: 'monotone' },
@@ -154,7 +241,6 @@ export class EnhancedVoiceEmotionAnalyzer {
         breathPattern: 'shallow',
         articulationPattern: 'weak'
       },
-      
       interest: {
         tone: 'attentive_engaging',
         pitch: { range: [140, 280], variability: 'moderate', tendency: 'varied' },
@@ -165,7 +251,6 @@ export class EnhancedVoiceEmotionAnalyzer {
         breathPattern: 'regular',
         articulationPattern: 'clear'
       },
-      
       boredom: {
         tone: 'dull_monotone',
         pitch: { range: [100, 160], variability: 'very_low', tendency: 'flat' },
@@ -177,7 +262,7 @@ export class EnhancedVoiceEmotionAnalyzer {
         articulationPattern: 'lazy'
       }
     };
-    
+
     // Voice feature extraction configuration
     this.analysisConfig = {
       sampleRate: 44100,
@@ -187,7 +272,7 @@ export class EnhancedVoiceEmotionAnalyzer {
       minFreq: 80,
       maxFreq: 8000
     };
-    
+
     // Real-time analysis data
     this.currentFeatures = {
       pitch: { mean: 0, variance: 0, range: 0 },
@@ -199,7 +284,7 @@ export class EnhancedVoiceEmotionAnalyzer {
       formants: [],
       zeroCrossingRate: 0
     };
-    
+
     // Training data integration
     this.loadTrainingWeights();
   }

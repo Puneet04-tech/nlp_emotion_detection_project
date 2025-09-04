@@ -76,4 +76,68 @@ app.get('/meta/:id', (req, res) => {
 
 app.get('/', (req, res) => res.send('Training upload server running'));
 
+// Status endpoint for diagnostics
+app.get('/status', (req, res) => {
+  try {
+    const uploadsCount = fs.readdirSync(uploadsDir).length;
+    const metaCount = fs.readdirSync(metaDir).filter(f => f.endsWith('.json')).length;
+    
+    res.json({
+      ok: true,
+      status: 'running',
+      server: 'Voice Emotion Training Server',
+      version: '1.0.0',
+      port: PORT,
+      uploadedFiles: uploadsCount,
+      trainingSamples: metaCount,
+      uptime: process.uptime(),
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// Samples endpoint for getting training data
+app.get('/samples', (req, res) => {
+  try {
+    const files = fs.readdirSync(metaDir).filter(f => f.endsWith('.json'));
+    const samples = files.map(f => {
+      try {
+        const content = JSON.parse(fs.readFileSync(path.join(metaDir, f), 'utf8'));
+        return {
+          id: content.id,
+          emotion: content.emotion,
+          timestamp: content.timestamp,
+          hasAudio: !!content.file,
+          hasFeatures: !!content.features,
+          hasTranscript: !!content.transcript && content.transcript !== '[object Object]'
+        };
+      } catch (e) {
+        console.warn('Failed to parse meta file:', f, e);
+        return null;
+      }
+    }).filter(Boolean);
+    
+    const stats = {
+      total: samples.length,
+      byEmotion: {},
+      recentSamples: samples.slice(0, 5),
+      lastUpdated: samples.length > 0 ? Math.max(...samples.map(s => new Date(s.timestamp).getTime())) : null
+    };
+    
+    samples.forEach(s => {
+      stats.byEmotion[s.emotion] = (stats.byEmotion[s.emotion] || 0) + 1;
+    });
+    
+    res.json({
+      ok: true,
+      samples,
+      stats
+    });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 app.listen(PORT, () => console.log(`Training server running at http://localhost:${PORT}`));

@@ -1,12 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import NovelBERTEnhancementSystem from '../utils/novelBERTEnhancementSystem.js';
 
 /**
  * Novel BERT Real-World Problem Solver
  * Advanced testing interface for practical AI applications
  */
 const NovelBERTProblemSolver = () => {
-  const [novelBERT] = useState(() => new NovelBERTEnhancementSystem());
+  const [novelBERT, setNovelBERT] = useState(null);
   const [analysis, setAnalysis] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [modelStatus, setModelStatus] = useState({ bertLoaded: false, ready: false });
@@ -76,34 +75,83 @@ const NovelBERTProblemSolver = () => {
   ];
 
   useEffect(() => {
-    // Initialize Novel BERT system
     const initializeNovelBERT = async () => {
       console.log('🚀 Initializing Novel BERT Enhancement System...');
+      setModelStatus({ bertLoaded: false, ready: false });
+      
       try {
-        await novelBERT.initializeNovelSystems();
+        const { default: NovelBERTClass } = await import('../utils/novelBERTEnhancementSystem.js');
+        
+        if (!NovelBERTClass) {
+          throw new Error('NovelBERTEnhancementSystem not exported');
+        }
+        
+        console.log('📦 NovelBERT class loaded, creating instance...');
+        const novelBERTInstance = new NovelBERTClass();
+        
+        console.log('🔧 Initializing BERT models...');
+        await novelBERTInstance.init();
+        
+        // Get actual model status
+        const actualStatus = novelBERTInstance.getModelStatus();
+        console.log('📊 Actual BERT status:', actualStatus);
+        
         console.log('✅ Novel BERT initialization complete');
+        setNovelBERT(novelBERTInstance);
+        setModelStatus({
+          bertLoaded: actualStatus.bertLoaded,
+          ready: actualStatus.ready,
+          fallbackMode: actualStatus.fallbackMode
+        });
+        
       } catch (error) {
-        console.warn('⚠️ Novel BERT initialization failed:', error);
+        console.error('❌ Novel BERT initialization failed:', error.message);
+        setModelStatus({ bertLoaded: false, ready: false, fallbackMode: true });
+        
+        // Create fallback
+        setNovelBERT({
+          analyzeForRealWorldProblems: async (text, context) => {
+            console.log('📋 Using component fallback analysis for:', text);
+            return {
+              emotions: { 
+                concern: 0.6, 
+                neutral: 0.4,
+                stress: text.toLowerCase().includes('stress') ? 0.8 : 0.2
+              },
+              recommendations: { 
+                support: [{ 
+                  action: 'Consider seeking professional support', 
+                  priority: 'medium',
+                  type: 'support'
+                }] 
+              },
+              confidence: 0.5,
+              domain: context.domain || 'general',
+              bertEnhanced: false,
+              analysisMethod: 'Component Fallback'
+            };
+          },
+          updateContextMemory: (data) => {
+            console.log('📝 Fallback: Context memory update called');
+          },
+          getModelStatus: () => ({
+            bertLoaded: false,
+            ready: false,
+            fallbackMode: true
+          })
+        });
       }
     };
     
-    // Check model status
-    const checkStatus = () => {
-      const status = novelBERT.getModelStatus();
-      setModelStatus(status);
-    };
-
-    // Initialize and then check status
-    initializeNovelBERT().then(() => {
-      checkStatus();
-      const interval = setInterval(checkStatus, 3000);
-      
-      // Store interval for cleanup
-      return () => clearInterval(interval);
-    });
-  }, [novelBERT]);
+    initializeNovelBERT();
+  }, []);
 
   const analyzeRealWorldProblem = async (text, context = {}) => {
+    if (!novelBERT) {
+      console.error('❌ NovelBERT not available');
+      setAnalysis({ error: 'System not ready. Please wait or refresh.' });
+      return;
+    }
     if (!text.trim()) return;
 
     setIsLoading(true);
@@ -111,6 +159,12 @@ const NovelBERTProblemSolver = () => {
       console.log('🌍 Analyzing real-world problem:', text);
       console.log('📋 Context:', context);
       const fullContext = { ...contextData, ...context, domain: selectedDomain };
+      
+      // Check if novelBERT has the required method
+      if (typeof novelBERT.analyzeForRealWorldProblems !== 'function') {
+        throw new Error('analyzeForRealWorldProblems method not available');
+      }
+      
       const result = await novelBERT.analyzeForRealWorldProblems(text, fullContext);
       
       console.log('🔍 Raw Novel BERT result:', result);
@@ -125,13 +179,17 @@ const NovelBERTProblemSolver = () => {
       
       setAnalysis(result);
       
-      // Update context memory
-      novelBERT.updateContextMemory({
-        text,
-        result,
-        timestamp: Date.now(),
-        domain: selectedDomain
-      });
+      // Update context memory (with safety check)
+      if (novelBERT && typeof novelBERT.updateContextMemory === 'function') {
+        novelBERT.updateContextMemory({
+          text,
+          result,
+          timestamp: Date.now(),
+          domain: selectedDomain
+        });
+      } else {
+        console.warn('⚠️ updateContextMemory method not available');
+      }
       
       console.log('🎯 Final real-world analysis result:', result);
     } catch (error) {
@@ -253,11 +311,17 @@ const NovelBERTProblemSolver = () => {
             width: '12px',
             height: '12px',
             borderRadius: '50%',
-            background: modelStatus.ready ? '#10b981' : '#f59e0b',
+            background: modelStatus.bertLoaded && !modelStatus.fallbackMode ? '#10b981' : 
+                        modelStatus.fallbackMode ? '#f59e0b' : '#ef4444',
             margin: '0 auto 8px',
             animation: modelStatus.ready ? 'none' : 'pulse 2s infinite'
           }}></div>
-          <span>BERT Model: {modelStatus.bertLoaded ? '✅ Loaded' : '⏳ Loading'}</span>
+          <span>
+            BERT Model: {
+              modelStatus.bertLoaded && !modelStatus.fallbackMode ? '✅ Active' : 
+              modelStatus.fallbackMode ? '⚠️ Fallback' : '❌ Failed'
+            }
+          </span>
         </div>
         
         <div style={{ textAlign: 'center' }}>

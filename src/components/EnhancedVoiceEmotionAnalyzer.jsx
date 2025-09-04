@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { loadModelLocal } from '../utils/tfVoiceClassifier';
-import { processAudioFile } from '../utils/fileProcessors';
+import { processAudioFileV3 } from '../utils/enhancedAudioProcessorV3';
 
 // Enhanced Voice Emotion Analyzer with proper BERT integration and pitch analysis
 const EnhancedVoiceEmotionAnalyzer = () => {
@@ -467,24 +467,38 @@ const EnhancedVoiceEmotionAnalyzer = () => {
   const handleFileUpload = async (e) => {
     const file = e && e.target && e.target.files && e.target.files[0];
     if (!file) return;
+    
+    console.log('🎵 File upload started:', {
+      name: file.name,
+      size: file.size,
+      type: file.type
+    });
+    
     if (!file.type || !file.type.startsWith('audio')) {
       alert('Please select a valid audio file (wav, mp3, m4a, etc.)');
       e.target.value = '';
       return;
     }
+    
     try {
+      setIsAnalyzing(true);
+      
       // Ensure AudioContext exists for decoding
       if (!audioContextRef.current || audioContextRef.current.state === 'closed') {
         audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
       }
 
-      // Attempt to transcribe the uploaded file using fileProcessors helper
+      console.log('🔄 Processing audio file with V3 processor...');
+      
+      // Attempt to transcribe the uploaded file using enhanced V3 processor
       let extracted = null;
       try {
-        extracted = await processAudioFile(file, (p) => {
+        extracted = await processAudioFileV3(file, (p) => {
           // show lightweight progress in console (could be wired to UI)
-          console.debug('[fileProcessors]', p);
-        }, 'en-US');
+          console.debug('[V3 Audio Processor]', p);
+        });
+        
+        console.log('✅ V3 Processing result:', extracted);
       } catch (procErr) {
         console.warn('File transcription failed, proceeding without transcript', procErr);
         extracted = null;
@@ -492,12 +506,17 @@ const EnhancedVoiceEmotionAnalyzer = () => {
 
       const arrayBuffer = await file.arrayBuffer();
       const audioBlob = new Blob([arrayBuffer], { type: file.type });
-      setIsAnalyzing(true);
-      // If processAudioFile returned a string result (transcript), pass it
-      const providedTranscript = typeof extracted === 'string' ? extracted : null;
+      
+      // Extract transcript from V3 response format
+      const providedTranscript = extracted && extracted.transcript ? extracted.transcript : null;
+      
+      console.log('📝 Extracted transcript:', providedTranscript);
+      
       await processAudio(audioBlob, providedTranscript);
+      
+      console.log('🎉 Audio file analysis completed successfully!');
     } catch (err) {
-      console.error('Failed to analyze uploaded audio file', err);
+      console.error('❌ Failed to analyze uploaded audio file:', err);
       alert('Failed to analyze audio file: ' + (err && err.message ? err.message : String(err)));
     } finally {
       // allow the same file to be selected again
@@ -506,6 +525,232 @@ const EnhancedVoiceEmotionAnalyzer = () => {
     }
   };
 
+  // Enhanced audio analysis for uploaded files
+  const analyzeUploadedAudioFeatures = (audioBuffer, transcript) => {
+    const channelData = audioBuffer.getChannelData(0);
+    const sampleRate = audioBuffer.sampleRate;
+    const duration = audioBuffer.duration;
+    
+    // 1. Advanced pitch analysis
+    const pitchAnalysis = analyzePitchWithCalibration(audioBuffer);
+    
+    // 2. Energy distribution analysis
+    const frameSize = Math.floor(sampleRate * 0.025); // 25ms frames
+    const hopSize = Math.floor(frameSize / 2);
+    const energyFrames = [];
+    
+    for (let i = 0; i < channelData.length - frameSize; i += hopSize) {
+      const frame = channelData.slice(i, i + frameSize);
+      const rms = Math.sqrt(frame.reduce((sum, sample) => sum + sample * sample, 0) / frameSize);
+      energyFrames.push(rms);
+    }
+    
+    // 3. Dynamic range analysis (emotional expressiveness)
+    const maxEnergy = Math.max(...energyFrames);
+    const minEnergy = Math.min(...energyFrames);
+    const dynamicRange = maxEnergy - minEnergy;
+    const energyVariance = energyFrames.reduce((sum, e) => sum + Math.pow(e - (maxEnergy + minEnergy) / 2, 2), 0) / energyFrames.length;
+    
+    // 4. Spectral analysis for voice quality
+    const zeroCrossings = channelData.reduce((count, sample, i) => {
+      return i > 0 && Math.sign(sample) !== Math.sign(channelData[i - 1]) ? count + 1 : count;
+    }, 0);
+    const zeroCrossingRate = zeroCrossings / duration;
+    
+    // 5. Tempo and rhythm analysis
+    const silenceThreshold = maxEnergy * 0.1;
+    const speechSegments = [];
+    let inSpeech = false;
+    let segmentStart = 0;
+    
+    energyFrames.forEach((energy, i) => {
+      if (energy > silenceThreshold && !inSpeech) {
+        inSpeech = true;
+        segmentStart = i;
+      } else if (energy <= silenceThreshold && inSpeech) {
+        inSpeech = false;
+        speechSegments.push((i - segmentStart) * hopSize / sampleRate);
+      }
+    });
+    
+    const avgSegmentLength = speechSegments.length > 0 ? 
+      speechSegments.reduce((a, b) => a + b, 0) / speechSegments.length : 0;
+    
+    // 6. Formant estimation (rough approximation)
+    const formantEstimate = zeroCrossingRate * 800; // Rough formant frequency estimate
+    
+    return {
+      pitch: pitchAnalysis,
+      energy: {
+        rms: Math.sqrt(channelData.reduce((sum, sample) => sum + sample * sample, 0) / channelData.length),
+        max: maxEnergy,
+        min: minEnergy,
+        dynamicRange: dynamicRange,
+        variance: energyVariance
+      },
+      spectral: {
+        zeroCrossingRate: zeroCrossingRate,
+        formantEstimate: formantEstimate,
+        roughness: zeroCrossingRate > 0.15 ? 1 : 0 // High ZCR indicates rough/harsh voice
+      },
+      temporal: {
+        duration: duration,
+        speechSegments: speechSegments.length,
+        avgSegmentLength: avgSegmentLength,
+        speechRate: transcript ? transcript.split(/\s+/).length / duration : 0
+      }
+    };
+  };
+
+  // Enhanced emotion classification for uploaded audio
+  const classifyEmotionFromAudioFeatures = (features, transcript) => {
+    const emotions = {
+      anger: 0,
+      joy: 0,
+      sadness: 0,
+      fear: 0,
+      surprise: 0,
+      disgust: 0,
+      neutral: 0.3 // baseline
+    };
+    
+    // Pitch-based emotion indicators
+    if (features.pitch && features.pitch.average) {
+      const pitch = features.pitch.average;
+      const pitchVariation = features.pitch.variation || 0;
+      
+      // High pitch with variation suggests excitement/joy/anger
+      if (pitch > 200 && pitchVariation > 50) {
+        emotions.joy += 0.4;
+        emotions.anger += 0.3;
+        emotions.surprise += 0.3;
+      }
+      
+      // Low pitch suggests sadness/disgust
+      if (pitch < 150) {
+        emotions.sadness += 0.4;
+        emotions.disgust += 0.2;
+      }
+      
+      // High pitch variation suggests emotional expressiveness
+      if (pitchVariation > 80) {
+        emotions.anger += 0.3;
+        emotions.joy += 0.2;
+        emotions.fear += 0.2;
+      }
+    }
+    
+    // Energy-based emotion indicators
+    if (features.energy) {
+      const dynamicRange = features.energy.dynamicRange;
+      const avgEnergy = (features.energy.max + features.energy.min) / 2;
+      
+      // High energy with dynamic range suggests anger/joy
+      if (avgEnergy > 0.3 && dynamicRange > 0.2) {
+        emotions.anger += 0.5;
+        emotions.joy += 0.4;
+      }
+      
+      // Low energy suggests sadness/fear
+      if (avgEnergy < 0.15) {
+        emotions.sadness += 0.4;
+        emotions.fear += 0.3;
+      }
+      
+      // High variance suggests emotional expressiveness
+      if (features.energy.variance > 0.05) {
+        emotions.anger += 0.3;
+        emotions.surprise += 0.2;
+      }
+    }
+    
+    // Spectral features
+    if (features.spectral) {
+      // High zero crossing rate suggests harsh/angry voice
+      if (features.spectral.zeroCrossingRate > 0.12) {
+        emotions.anger += 0.4;
+        emotions.disgust += 0.3;
+      }
+      
+      // Roughness indicator
+      if (features.spectral.roughness > 0.5) {
+        emotions.anger += 0.3;
+        emotions.fear += 0.2;
+      }
+    }
+    
+    // Temporal features
+    if (features.temporal) {
+      // Fast speech rate suggests excitement/anxiety
+      if (features.temporal.speechRate > 3) {
+        emotions.joy += 0.3;
+        emotions.fear += 0.3;
+        emotions.anger += 0.2;
+      }
+      
+      // Slow speech rate suggests sadness
+      if (features.temporal.speechRate < 1.5) {
+        emotions.sadness += 0.4;
+      }
+      
+      // Short segments suggest choppy/emotional speech
+      if (features.temporal.avgSegmentLength < 0.5) {
+        emotions.anger += 0.2;
+        emotions.fear += 0.3;
+      }
+    }
+    
+    // Transcript-based emotion boosting
+    if (transcript && transcript.length > 0) {
+      const text = transcript.toLowerCase();
+      
+      // Enhanced emotion keywords
+      const emotionKeywords = {
+        anger: ['angry', 'mad', 'furious', 'hate', 'damn', 'hell', 'stupid', 'idiot', 'terrible', 'awful'],
+        joy: ['happy', 'excited', 'wonderful', 'amazing', 'fantastic', 'great', 'awesome', 'love', 'brilliant', 'excellent'],
+        sadness: ['sad', 'depressed', 'cry', 'tears', 'sorry', 'hurt', 'pain', 'lonely', 'empty', 'broken'],
+        fear: ['scared', 'afraid', 'terrified', 'worried', 'anxious', 'nervous', 'panic', 'frightened'],
+        surprise: ['wow', 'amazing', 'unbelievable', 'shocking', 'unexpected', 'sudden', 'surprising'],
+        disgust: ['disgusting', 'gross', 'horrible', 'nasty', 'revolting', 'sick', 'awful', 'terrible']
+      };
+      
+      Object.entries(emotionKeywords).forEach(([emotion, keywords]) => {
+        const matches = keywords.filter(keyword => text.includes(keyword)).length;
+        emotions[emotion] += matches * 0.3;
+      });
+      
+      // Emotional intensity markers
+      const intensityMarkers = ['very', 'extremely', 'really', 'so', 'totally', 'absolutely'];
+      const intensityCount = intensityMarkers.filter(marker => text.includes(marker)).length;
+      
+      // Boost non-neutral emotions based on intensity
+      Object.keys(emotions).forEach(emotion => {
+        if (emotion !== 'neutral' && emotions[emotion] > 0.1) {
+          emotions[emotion] += intensityCount * 0.2;
+        }
+      });
+    }
+    
+    // Normalize and find dominant emotion
+    const totalScore = Object.values(emotions).reduce((sum, score) => sum + score, 0);
+    const normalizedEmotions = {};
+    Object.entries(emotions).forEach(([emotion, score]) => {
+      normalizedEmotions[emotion] = score / totalScore;
+    });
+    
+    // Find the emotion with highest score
+    const dominantEmotion = Object.entries(normalizedEmotions)
+      .sort(([,a], [,b]) => b - a)[0];
+    
+    const confidence = Math.min(0.95, Math.max(0.4, dominantEmotion[1] * 2)); // Scale confidence
+    
+    return {
+      emotion: dominantEmotion[0],
+      confidence: confidence,
+      scores: normalizedEmotions,
+      source: 'enhanced-audio-analysis'
+    };
+  };
   // Process audio and analyze emotions with enhanced voice feature extraction
   // accepts optional providedTranscript so file uploads can supply a transcript
   const processAudio = async (audioBlob, providedTranscript = null) => {
@@ -519,7 +764,16 @@ const EnhancedVoiceEmotionAnalyzer = () => {
       const arrayBuffer = await audioBlob.arrayBuffer();
       const audioBuffer = await audioContextRef.current.decodeAudioData(arrayBuffer);
       
-      // Analyze pitch with calibration
+      // Use enhanced audio analysis for uploaded files
+      const enhancedFeatures = analyzeUploadedAudioFeatures(audioBuffer, providedTranscript);
+      
+      // Get enhanced emotion classification
+      const enhancedEmotionAnalysis = classifyEmotionFromAudioFeatures(enhancedFeatures, providedTranscript);
+      
+      console.log('🎵 Enhanced audio features:', enhancedFeatures);
+      console.log('🎭 Enhanced emotion analysis:', enhancedEmotionAnalysis);
+      
+      // Legacy analysis for comparison
       const pitchAnalysis = analyzePitchWithCalibration(audioBuffer);
       
       // Enhanced voice features calculation
@@ -552,9 +806,9 @@ const EnhancedVoiceEmotionAnalyzer = () => {
       const zeroCrossingRate = zeroCrossings / channelData.length;
       
       // Estimate speech rate (rough approximation)
-  // Use provided transcript when available (uploaded file), otherwise live transcript
-  const activeTranscript = providedTranscript !== null ? providedTranscript : transcript;
-  const speechRate = activeTranscript ? activeTranscript.split(/\s+/).length / audioBuffer.duration : 1.0;
+      // Use provided transcript when available (uploaded file), otherwise live transcript
+      const activeTranscript = providedTranscript !== null ? providedTranscript : transcript;
+      const speechRate = activeTranscript ? activeTranscript.split(/\s+/).length / audioBuffer.duration : 1.0;
       
       const voiceFeatures = {
         pitch: pitchAnalysis,
@@ -569,7 +823,8 @@ const EnhancedVoiceEmotionAnalyzer = () => {
         speech: {
           rate: speechRate,
           wordsPerSecond: activeTranscript ? activeTranscript.split(/\s+/).length / audioBuffer.duration : 0
-        }
+        },
+        enhanced: enhancedFeatures // Add enhanced features
       };
 
       // If ML model is loaded and enabled, attempt prediction
@@ -604,6 +859,35 @@ const EnhancedVoiceEmotionAnalyzer = () => {
 
   // Perform BERT-integrated emotion analysis (await wrapper)
   let emotionAnalysis = await analyzeEmotionWithBERT(activeTranscript, voiceFeatures);
+  
+  // For uploaded files, compare enhanced audio analysis with BERT analysis
+  if (providedTranscript !== null) {
+    console.log('🔄 Comparing BERT vs Enhanced Audio Analysis:');
+    console.log('BERT Analysis:', emotionAnalysis);
+    console.log('Enhanced Audio Analysis:', enhancedEmotionAnalysis);
+    
+    // Use enhanced audio analysis if:
+    // 1. BERT confidence is low (< 0.7) OR
+    // 2. Enhanced analysis has high confidence (> 0.8) OR
+    // 3. BERT returned neutral but enhanced found a strong emotion
+    const shouldUseEnhanced = (
+      emotionAnalysis.confidence < 0.7 ||
+      enhancedEmotionAnalysis.confidence > 0.8 ||
+      (emotionAnalysis.emotion === 'neutral' && enhancedEmotionAnalysis.emotion !== 'neutral' && enhancedEmotionAnalysis.confidence > 0.6)
+    );
+    
+    if (shouldUseEnhanced) {
+      console.log('✅ Using Enhanced Audio Analysis (more confident)');
+      emotionAnalysis = enhancedEmotionAnalysis;
+    } else {
+      console.log('✅ Using BERT Analysis (more confident)');
+      // Boost BERT confidence with audio features if they align
+      if (enhancedEmotionAnalysis.emotion === emotionAnalysis.emotion) {
+        emotionAnalysis.confidence = Math.min(0.95, emotionAnalysis.confidence + 0.15);
+        emotionAnalysis.source = 'bert-audio-aligned';
+      }
+    }
+  }
 
       // Smooth raw features via EMA to reduce spurious spikes
       const smPitch = emaUpdate('pitch', voiceFeatures.pitch && voiceFeatures.pitch.average ? voiceFeatures.pitch.average : voiceFeatures.pitch || 0);
@@ -1153,15 +1437,39 @@ const EnhancedVoiceEmotionAnalyzer = () => {
           </div>
 
           {/* File upload for offline audio analysis */}
-          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-            <input type="file" accept="audio/*" onChange={handleFileUpload} style={{ display: 'none' }} />
+          <label style={{ 
+            display: 'inline-flex', 
+            alignItems: 'center', 
+            gap: 8, 
+            cursor: 'pointer',
+            transition: 'all 0.3s ease',
+            opacity: isAnalyzing ? 0.6 : 1,
+            pointerEvents: isAnalyzing ? 'none' : 'auto'
+          }}>
+            <input 
+              type="file" 
+              accept="audio/*,audio/wav,audio/mp3,audio/m4a,audio/ogg" 
+              onChange={handleFileUpload} 
+              style={{ display: 'none' }}
+              disabled={isAnalyzing}
+            />
             <div style={{
-              background: 'rgba(255,255,255,0.08)',
-              padding: '10px 14px',
-              borderRadius: '10px',
-              border: '1px solid rgba(255,255,255,0.12)',
-              color: '#fff'
-            }}>📁 Upload Audio</div>
+              background: isAnalyzing ? 'rgba(128,128,128,0.3)' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              padding: '12px 18px',
+              borderRadius: '12px',
+              border: '2px solid rgba(255,255,255,0.2)',
+              color: '#fff',
+              fontWeight: '600',
+              fontSize: '0.95em',
+              boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)',
+              transform: 'scale(1)',
+              ':hover': {
+                transform: 'scale(1.05)',
+                boxShadow: '0 6px 20px rgba(102, 126, 234, 0.4)'
+              }
+            }}>
+              {isAnalyzing ? '⏳ Processing...' : '📁 Upload Audio File'}
+            </div>
           </label>
         </div>
 

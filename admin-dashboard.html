@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Server Admin Dashboard</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: #ffffff;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .dashboard {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #4ade80;
+            margin: 0;
+            font-size: 2.5em;
+        }
+        .server-info {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .card h3 {
+            margin-top: 0;
+            color: #60a5fa;
+        }
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #4ade80;
+        }
+        .recent-activity {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .activity-item {
+            background: rgba(255, 255, 255, 0.05);
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #4ade80;
+        }
+        .activity-time {
+            color: #94a3b8;
+            font-size: 0.9em;
+        }
+        .activity-emotion {
+            display: inline-block;
+            background: #1e40af;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 5px;
+            font-size: 0.8em;
+            margin: 5px 5px 0 0;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-online { background: #4ade80; }
+        .status-offline { background: #ef4444; }
+        .export-section {
+            text-align: center;
+            margin: 30px 0;
+        }
+        .btn {
+            background: linear-gradient(45deg, #3b82f6, #1e40af);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            margin: 5px;
+            transition: transform 0.2s;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        .emotion-summary {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .emotion-tag {
+            background: rgba(59, 130, 246, 0.3);
+            color: #93c5fd;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.9em;
+        }
+        .live-feed {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 300px;
+            background: rgba(0, 0, 0, 0.9);
+            border-radius: 10px;
+            padding: 15px;
+            border: 2px solid #4ade80;
+            max-height: 50vh;
+            overflow-y: auto;
+            z-index: 1000;
+        }
+        .live-feed h4 {
+            margin-top: 0;
+            color: #4ade80;
+        }
+        .live-item {
+            background: rgba(255, 255, 255, 0.1);
+            margin: 5px 0;
+            padding: 8px;
+            border-radius: 5px;
+            font-size: 0.9em;
+        }
+        .network-info {
+            background: rgba(59, 130, 246, 0.2);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .network-url {
+            font-family: monospace;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 5px 10px;
+            border-radius: 5px;
+            margin: 5px 0;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <div class="header">
+            <h1>🎤 Enhanced Audio Analysis Server</h1>
+            <p>Real-time monitoring dashboard for your audio emotion detection system</p>
+        </div>
+
+        <div class="server-info">
+            <h3>
+                <span class="status-indicator" id="serverStatus"></span>
+                Server Status
+            </h3>
+            <div id="serverDetails">Connecting to server...</div>
+            <div class="network-info" id="networkInfo" style="display: none;">
+                <h4>📡 Share These URLs:</h4>
+                <div id="networkUrls"></div>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <h3>📊 Live Statistics</h3>
+                <div>Active Sessions: <span class="stat-number" id="activeSessions">0</span></div>
+                <div>Total Uploads: <span class="stat-number" id="totalUploads">0</span></div>
+                <div>Today's Activity: <span class="stat-number" id="todayActivity">0</span></div>
+            </div>
+
+            <div class="card">
+                <h3>🎭 Emotion Summary</h3>
+                <div id="emotionSummary" class="emotion-summary">
+                    Loading emotion data...
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>💻 System Info</h3>
+                <div id="systemInfo">Loading system information...</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>📝 Recent Activity</h3>
+            <div class="recent-activity" id="recentActivity">
+                Loading recent activity...
+            </div>
+        </div>
+
+        <div class="export-section">
+            <h3>📥 Data Management</h3>
+            <button class="btn" onclick="exportAllData()">📊 Export All Data</button>
+            <button class="btn" onclick="refreshDashboard()">🔄 Refresh Dashboard</button>
+            <button class="btn" onclick="clearOldData()">🧹 Clear Old Data</button>
+        </div>
+    </div>
+
+    <!-- Live feed sidebar -->
+    <div class="live-feed" id="liveFeed">
+        <h4>🔴 Live Feed</h4>
+        <div id="liveItems">
+            <div class="live-item">Waiting for activity...</div>
+        </div>
+    </div>
+
+    <script>
+        class AdminDashboard {
+            constructor() {
+                this.serverUrl = 'http://localhost:4000';
+                this.wsUrl = 'ws://localhost:4001';
+                this.ws = null;
+                this.reconnectAttempts = 0;
+                this.maxReconnectAttempts = 5;
+                
+                this.init();
+            }
+
+            async init() {
+                await this.checkServerHealth();
+                this.connectWebSocket();
+                this.loadDashboardData();
+                
+                // Refresh data every 30 seconds
+                setInterval(() => this.loadDashboardData(), 30000);
+            }
+
+            async checkServerHealth() {
+                try {
+                    const response = await fetch(`${this.serverUrl}/api/health`);
+                    if (response.ok) {
+                        const health = await response.json();
+                        this.updateServerStatus(true, health);
+                        return true;
+                    }
+                } catch (error) {
+                    console.error('Server health check failed:', error);
+                }
+                this.updateServerStatus(false);
+                return false;
+            }
+
+            updateServerStatus(online, healthData = null) {
+                const statusIndicator = document.getElementById('serverStatus');
+                const serverDetails = document.getElementById('serverDetails');
+                const networkInfo = document.getElementById('networkInfo');
+                const networkUrls = document.getElementById('networkUrls');
+
+                if (online && healthData) {
+                    statusIndicator.className = 'status-indicator status-online';
+                    
+                    const uptime = Math.floor(healthData.uptime / 3600);
+                    serverDetails.innerHTML = `
+                        <strong>Online</strong> - Uptime: ${uptime}h<br>
+                        Platform: ${healthData.serverInfo.platform}<br>
+                        Hostname: ${healthData.serverInfo.hostname}<br>
+                        Memory: ${healthData.serverInfo.memory.free} free of ${healthData.serverInfo.memory.total}
+                    `;
+
+                    // Show network URLs for sharing
+                    if (healthData.serverInfo.ips.length > 0) {
+                        networkInfo.style.display = 'block';
+                        networkUrls.innerHTML = healthData.serverInfo.ips.map(ip => 
+                            `<span class="network-url">http://${ip}:${healthData.serverInfo.ports.http}</span>`
+                        ).join('');
+                    }
+                } else {
+                    statusIndicator.className = 'status-indicator status-offline';
+                    serverDetails.innerHTML = '<strong>Offline</strong> - Cannot connect to server';
+                    networkInfo.style.display = 'none';
+                }
+            }
+
+            connectWebSocket() {
+                try {
+                    this.ws = new WebSocket(this.wsUrl);
+                    
+                    this.ws.onopen = () => {
+                        console.log('🔗 Connected to WebSocket');
+                        this.reconnectAttempts = 0;
+                        
+                        // Identify as admin
+                        this.ws.send(JSON.stringify({
+                            type: 'admin_connect'
+                        }));
+                        
+                        this.addLiveItem('📡 Connected to live feed');
+                    };
+
+                    this.ws.onmessage = (event) => {
+                        try {
+                            const message = JSON.parse(event.data);
+                            this.handleWebSocketMessage(message);
+                        } catch (err) {
+                            console.error('WebSocket message parse error:', err);
+                        }
+                    };
+
+                    this.ws.onclose = () => {
+                        console.log('🔌 WebSocket disconnected');
+                        this.addLiveItem('📡 Live feed disconnected');
+                        
+                        // Attempt to reconnect
+                        if (this.reconnectAttempts < this.maxReconnectAttempts) {
+                            this.reconnectAttempts++;
+                            setTimeout(() => {
+                                console.log(`🔄 Reconnecting... Attempt ${this.reconnectAttempts}`);
+                                this.connectWebSocket();
+                            }, 5000);
+                        }
+                    };
+
+                    this.ws.onerror = (error) => {
+                        console.error('❌ WebSocket error:', error);
+                    };
+
+                } catch (error) {
+                    console.error('WebSocket connection failed:', error);
+                }
+            }
+
+            handleWebSocketMessage(message) {
+                switch (message.type) {
+                    case 'server_status':
+                        this.updateServerStatus(true, message.data);
+                        this.updateStats(message.data);
+                        break;
+                        
+                    case 'new_session':
+                        this.addLiveItem(`👤 New user session from ${message.data.ip}`);
+                        this.updateStats();
+                        break;
+                        
+                    case 'new_upload':
+                        const uploadData = message.data;
+                        this.addLiveItem(`📤 Audio upload: ${uploadData.emotion || 'Unknown'} emotion`);
+                        this.updateStats();
+                        break;
+                        
+                    case 'new_recording':
+                        const recordingData = message.data;
+                        this.addLiveItem(`🎙️ Live recording: ${recordingData.emotion || 'Unknown'} emotion`);
+                        break;
+                }
+            }
+
+            addLiveItem(text) {
+                const liveItems = document.getElementById('liveItems');
+                const timestamp = new Date().toLocaleTimeString();
+                
+                const item = document.createElement('div');
+                item.className = 'live-item';
+                item.innerHTML = `<span class="activity-time">${timestamp}</span><br>${text}`;
+                
+                liveItems.insertBefore(item, liveItems.firstChild);
+                
+                // Keep only last 20 items
+                while (liveItems.children.length > 20) {
+                    liveItems.removeChild(liveItems.lastChild);
+                }
+            }
+
+            async loadDashboardData() {
+                try {
+                    const [analyticsResponse, dataResponse] = await Promise.all([
+                        fetch(`${this.serverUrl}/api/analytics/live`),
+                        fetch(`${this.serverUrl}/api/data/all`)
+                    ]);
+
+                    if (analyticsResponse.ok) {
+                        const analytics = await analyticsResponse.json();
+                        this.updateStats(analytics);
+                        this.updateSystemInfo(analytics.serverInfo);
+                    }
+
+                    if (dataResponse.ok) {
+                        const allData = await dataResponse.json();
+                        this.updateRecentActivity(allData.metadata);
+                        this.updateEmotionSummary(allData.metadata);
+                    }
+
+                } catch (error) {
+                    console.error('Failed to load dashboard data:', error);
+                }
+            }
+
+            updateStats(analytics = {}) {
+                document.getElementById('activeSessions').textContent = analytics.activeSessions || '0';
+                document.getElementById('totalUploads').textContent = analytics.totalUploads || '0';
+                document.getElementById('todayActivity').textContent = analytics.recentUploads || '0';
+            }
+
+            updateSystemInfo(serverInfo = {}) {
+                const systemInfo = document.getElementById('systemInfo');
+                if (serverInfo.platform) {
+                    systemInfo.innerHTML = `
+                        Platform: ${serverInfo.platform} ${serverInfo.arch}<br>
+                        Memory: ${serverInfo.memory?.total || 'Unknown'}<br>
+                        Network IPs: ${serverInfo.ips?.length || 0} available<br>
+                        Ports: HTTP:${serverInfo.ports?.http}, WS:${serverInfo.ports?.websocket}
+                    `;
+                }
+            }
+
+            updateRecentActivity(metadata = []) {
+                const recentActivity = document.getElementById('recentActivity');
+                
+                // Sort by timestamp descending
+                const sorted = metadata.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                const recent = sorted.slice(0, 10);
+
+                if (recent.length === 0) {
+                    recentActivity.innerHTML = '<div class="activity-item">No recent activity</div>';
+                    return;
+                }
+
+                recentActivity.innerHTML = recent.map(item => {
+                    const time = new Date(item.timestamp).toLocaleString();
+                    const emotion = item.emotion || 'Unknown';
+                    const transcript = item.transcript ? item.transcript.substring(0, 100) + '...' : 'No transcript';
+                    const confidence = item.confidence ? `${Math.round(item.confidence)}%` : 'N/A';
+                    
+                    return `
+                        <div class="activity-item">
+                            <div class="activity-time">${time} - ${item.ip || 'Unknown IP'}</div>
+                            <div><span class="activity-emotion">${emotion} (${confidence})</span></div>
+                            <div style="margin-top: 5px; font-size: 0.9em; color: #cbd5e1;">${transcript}</div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            updateEmotionSummary(metadata = []) {
+                const emotionSummary = document.getElementById('emotionSummary');
+                
+                // Count emotions
+                const emotionCounts = {};
+                metadata.forEach(item => {
+                    if (item.emotion) {
+                        emotionCounts[item.emotion] = (emotionCounts[item.emotion] || 0) + 1;
+                    }
+                });
+
+                if (Object.keys(emotionCounts).length === 0) {
+                    emotionSummary.innerHTML = '<div class="emotion-tag">No emotions detected yet</div>';
+                    return;
+                }
+
+                emotionSummary.innerHTML = Object.entries(emotionCounts)
+                    .sort(([,a], [,b]) => b - a)
+                    .map(([emotion, count]) => `<div class="emotion-tag">${emotion}: ${count}</div>`)
+                    .join('');
+            }
+        }
+
+        // Global functions
+        async function exportAllData() {
+            try {
+                const response = await fetch('http://localhost:4000/api/data/all');
+                const data = await response.json();
+                
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `audio-emotion-data-${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                
+                alert('✅ Data exported successfully!');
+            } catch (error) {
+                alert('❌ Export failed: ' + error.message);
+            }
+        }
+
+        function refreshDashboard() {
+            window.location.reload();
+        }
+
+        async function clearOldData() {
+            if (confirm('⚠️ Clear data older than 7 days? This cannot be undone.')) {
+                // This would need a server endpoint to implement
+                alert('🚧 Clear data feature coming soon!');
+            }
+        }
+
+        // Initialize dashboard
+        const dashboard = new AdminDashboard();
+    </script>
+</body>
+</html>
