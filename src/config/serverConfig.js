@@ -3,7 +3,7 @@
 
 export const SERVER_CONFIG = {
   // 🚨 IMPORTANT: Replace this URL after Render deployment
-  baseUrl: 'https://YOUR_RENDER_URL_HERE.onrender.com',
+  baseUrl: 'https://nlp-emotion-detection-project.onrender.com',
   
   // API endpoints
   endpoints: {

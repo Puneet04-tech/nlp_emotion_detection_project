@@ -6,7 +6,7 @@ class NetlifyDataSender {
     // 🚨 IMPORTANT: Update this URL after Render deployment
     // Replace 'YOUR_RENDER_URL_HERE' with your actual Render URL
     this.serverEndpoints = [
-      'https://YOUR_RENDER_URL_HERE.onrender.com/api/netlify-data'
+      'https://nlp-emotion-detection-project.onrender.com/api/netlify-data'
     ];
     
     // Backup methods (optional - configure if needed)
