@@ -3,15 +3,13 @@
 
 class NetlifyDataSender {
   constructor() {
-    // Your deployed server endpoints (will be updated after deployment)
+    // 🚨 IMPORTANT: Update this URL after Render deployment
+    // Replace 'YOUR_RENDER_URL_HERE' with your actual Render URL
     this.serverEndpoints = [
-      'https://your-app-name.onrender.com/api/netlify-data',     // Render
-      'https://your-app-name.up.railway.app/api/netlify-data',  // Railway  
-      'https://your-app-name.herokuapp.com/api/netlify-data',   // Heroku
-      'https://your-app-name.vercel.app/api/netlify-data'       // Vercel
+      'https://YOUR_RENDER_URL_HERE.onrender.com/api/netlify-data'
     ];
     
-    // Backup methods
+    // Backup methods (optional - configure if needed)
     this.discordWebhook = 'https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_TOKEN';
     this.emailEndpoint = 'https://api.emailjs.com/api/v1.0/email/send';
     
