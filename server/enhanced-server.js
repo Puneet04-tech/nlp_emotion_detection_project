@@ -13,7 +13,11 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 4000;
-const WS_PORT = process.env.WS_PORT || 4001;
+const WS_PORT = process.env.WS_PORT || (PORT + 1);
+
+// Handle deployment environment
+const isDevelopment = process.env.NODE_ENV !== 'production';
+const isLocalhost = process.env.NODE_ENV !== 'production';
 
 // Enhanced storage configuration
 const storage = multer.diskStorage({

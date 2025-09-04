@@ -3,9 +3,18 @@
 
 class NetlifyDataSender {
   constructor() {
-    // Your laptop's endpoint (you'll need to set this up)
-    this.laptopEndpoint = 'http://YOUR_LAPTOP_IP:4000'; // We'll configure this
-    this.webhookUrl = 'https://YOUR_WEBHOOK_URL'; // Backup webhook service
+    // Your deployed server endpoints (will be updated after deployment)
+    this.serverEndpoints = [
+      'https://your-app-name.onrender.com/api/netlify-data',     // Render
+      'https://your-app-name.up.railway.app/api/netlify-data',  // Railway  
+      'https://your-app-name.herokuapp.com/api/netlify-data',   // Heroku
+      'https://your-app-name.vercel.app/api/netlify-data'       // Vercel
+    ];
+    
+    // Backup methods
+    this.discordWebhook = 'https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_TOKEN';
+    this.emailEndpoint = 'https://api.emailjs.com/api/v1.0/email/send';
+    
     this.isNetlifyDeployment = window.location.hostname.includes('netlify.app');
     
     // Fallback data storage
@@ -13,6 +22,7 @@ class NetlifyDataSender {
     
     console.log('🌐 Netlify Data Sender initialized');
     console.log('🔍 Is Netlify deployment:', this.isNetlifyDeployment);
+    console.log('🎯 Server endpoints configured:', this.serverEndpoints.length);
   }
 
   // Send data to your laptop (multiple methods for reliability)
@@ -28,22 +38,24 @@ class NetlifyDataSender {
 
     console.log('📤 Sending data to laptop:', payload);
 
-    // Method 1: Direct to your laptop (if accessible)
-    try {
-      await this.sendDirectToLaptop(payload);
-      console.log('✅ Data sent directly to laptop');
-      return { success: true, method: 'direct' };
-    } catch (error) {
-      console.warn('⚠️ Direct laptop connection failed:', error.message);
+    // Method 1: Try all server endpoints
+    for (const endpoint of this.serverEndpoints) {
+      try {
+        await this.sendToServer(payload, endpoint);
+        console.log(`✅ Data sent to server: ${endpoint}`);
+        return { success: true, method: 'server', endpoint };
+      } catch (error) {
+        console.warn(`⚠️ Server ${endpoint} failed:`, error.message);
+      }
     }
 
-    // Method 2: Via webhook service (backup)
+    // Method 2: Via Discord webhook (backup)
     try {
-      await this.sendViaWebhook(payload);
-      console.log('✅ Data sent via webhook service');
-      return { success: true, method: 'webhook' };
+      await this.sendViaDiscord(payload);
+      console.log('✅ Data sent via Discord webhook');
+      return { success: true, method: 'discord' };
     } catch (error) {
-      console.warn('⚠️ Webhook service failed:', error.message);
+      console.warn('⚠️ Discord webhook failed:', error.message);
     }
 
     // Method 3: Email notification (fallback)
@@ -61,10 +73,9 @@ class NetlifyDataSender {
     return { success: true, method: 'local' };
   }
 
-  // Method 1: Direct connection to your laptop
-  async sendDirectToLaptop(payload) {
-    // This will work if your laptop is accessible from the internet
-    const response = await fetch(`${this.laptopEndpoint}/api/netlify-data`, {
+  // Method 1: Send to deployed server
+  async sendToServer(payload, endpoint) {
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
