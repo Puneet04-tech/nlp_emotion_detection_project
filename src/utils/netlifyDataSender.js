@@ -1,15 +1,15 @@
-// Netlify Data Sender - Sends all user data to your laptop
-// This works even when your project is deployed on Netlify
+// Cloud Data Sender - Sends all user data to cloud server (works 24/7)
+// This works globally even when your laptop is off
 
 class NetlifyDataSender {
   constructor() {
-    // 🚨 IMPORTANT: Update this URL after Render deployment
-    // Replace 'YOUR_RENDER_URL_HERE' with your actual Render URL
+    // ✅ CLOUD SERVER: Always running on Render (24/7 access)
     this.serverEndpoints = [
       'https://nlp-emotion-detection-project.onrender.com/api/netlify-data'
     ];
     
-    // Backup methods (optional - configure if needed)
+    // 📧 Email notifications for important data
+    this.emailNotifications = true;
     this.discordWebhook = 'https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_TOKEN';
     this.emailEndpoint = 'https://api.emailjs.com/api/v1.0/email/send';
     
@@ -18,13 +18,14 @@ class NetlifyDataSender {
     // Fallback data storage
     this.localData = JSON.parse(localStorage.getItem('voiceEmotionData') || '[]');
     
-    console.log('🌐 Netlify Data Sender initialized');
+    console.log('🌐 Cloud Data Sender initialized');
+    console.log('☁️ Server always running at:', this.serverEndpoints[0]);
     console.log('🔍 Is Netlify deployment:', this.isNetlifyDeployment);
-    console.log('🎯 Server endpoints configured:', this.serverEndpoints.length);
+    console.log('📧 Email notifications:', this.emailNotifications);
   }
 
-  // Send data to your laptop (multiple methods for reliability)
-  async sendToLaptop(data) {
+  // Send data to cloud server (works 24/7 even when laptop is off)
+  async sendToCloud(data) {
     const timestamp = new Date().toISOString();
     const payload = {
       ...data,
