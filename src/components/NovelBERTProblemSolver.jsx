@@ -220,12 +220,48 @@ const NovelBERTProblemSolver = () => {
 
   const getRecommendationIcon = (type) => {
     const icons = {
+      // Existing types
       immediate: '🚨',
       support: '🤝',
       engagement: '🎯',
       connection: '🔗',
       resolution: '✅',
-      critical: '⚠️'
+      critical: '⚠️',
+      
+      // New comprehensive types
+      positive_reinforcement: '🌟',
+      social_sharing: '📢',
+      emotion_regulation: '🧘',
+      communication_strategy: '💬',
+      immediate_wellness: '🏃‍♀️',
+      emotional_support: '❤️',
+      self_care: '🛁',
+      crisis_support: '🆘',
+      anxiety_management: '🌱',
+      information_gathering: '📚',
+      grounding_technique: '🌍',
+      information_processing: '🧠',
+      clarification_seeking: '❓',
+      situation_assessment: '🔍',
+      professional_communication: '👔',
+      general_awareness: '💭',
+      medical_emergency: '🏥',
+      medical_consultation: '👨‍⚕️',
+      academic_planning: '📅',
+      academic_support: '🎓',
+      business_triage: '📊',
+      stakeholder_communication: '📈',
+      professional_mental_health: '🧑‍⚕️',
+      mindfulness_practice: '🧘‍♀️',
+      conflict_resolution: '🤝',
+      relationship_building: '💞',
+      immediate_action: '⚡',
+      problem_solving: '🧩',
+      decision_making: '⚖️',
+      help_seeking: '🙋‍♀️',
+      breathing_exercise: '💨',
+      immediate_self_care: '🌸',
+      emotional_perspective: '🔄'
     };
     return icons[type] || '💡';
   };
@@ -293,8 +329,24 @@ const NovelBERTProblemSolver = () => {
         🌟 Novel BERT Real-World Problem Solver
       </h1>
       <p style={{ textAlign: 'center', marginBottom: '40px', fontSize: '1.2em', opacity: 0.9 }}>
-        Advanced AI system for practical problem solving across domains
+        Advanced AI system for practical problem solving across domains - Now with universal recommendations for ALL statements!
       </p>
+      
+      {/* New Features Highlight */}
+      <div style={{
+        background: 'rgba(16, 185, 129, 0.2)',
+        border: '2px solid #10b981',
+        borderRadius: '10px',
+        padding: '15px',
+        marginBottom: '20px',
+        textAlign: 'center'
+      }}>
+        <h3 style={{ margin: '0 0 10px 0', color: '#10b981' }}>🚀 New: Universal Recommendations</h3>
+        <p style={{ margin: 0, fontSize: '0.95em' }}>
+          The system now generates personalized recommendations for ANY statement or situation - 
+          not just predefined examples. Try typing anything and see comprehensive, context-aware advice!
+        </p>
+      </div>
 
       {/* System Status */}
       <div style={{
@@ -402,9 +454,10 @@ const NovelBERTProblemSolver = () => {
         <textarea
           value={testInput}
           onChange={(e) => setTestInput(e.target.value)}
+          placeholder="Enter any statement or situation for comprehensive emotion analysis and personalized recommendations..."
           style={{
             width: '100%',
-            minHeight: '100px',
+            minHeight: '120px',
             padding: '15px',
             borderRadius: '8px',
             border: 'none',
@@ -412,8 +465,48 @@ const NovelBERTProblemSolver = () => {
             resize: 'vertical',
             fontFamily: 'inherit'
           }}
-          placeholder="Describe the real-world problem or situation..."
         />
+        
+        {/* Quick Test Examples */}
+        <div style={{ marginTop: '15px' }}>
+          <p style={{ marginBottom: '10px', fontSize: '0.9em', opacity: 0.8 }}>
+            💡 Try these examples for comprehensive recommendations:
+          </p>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: '8px',
+            marginBottom: '15px'
+          }}>
+            {[
+              "I'm excited about my new job opportunity!",
+              "I can't decide between these two important choices",
+              "I need help understanding this complex problem",
+              "I'm feeling overwhelmed with everything right now",
+              "I achieved my goal and feel really proud",
+              "I'm worried about tomorrow's presentation"
+            ].map((example, index) => (
+              <button
+                key={index}
+                onClick={() => setTestInput(example)}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: '6px',
+                  border: '1px solid rgba(255,255,255,0.3)',
+                  background: 'rgba(255,255,255,0.1)',
+                  color: 'white',
+                  fontSize: '0.85em',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease'
+                }}
+                onMouseOver={(e) => e.target.style.background = 'rgba(255,255,255,0.2)'}
+                onMouseOut={(e) => e.target.style.background = 'rgba(255,255,255,0.1)'}
+              >
+                {example.length > 40 ? example.substring(0, 40) + '...' : example}
+              </button>
+            ))}
+          </div>
+        </div>
         
         <div style={{
           display: 'flex',
@@ -681,7 +774,7 @@ const NovelBERTProblemSolver = () => {
         </div>
       )}
 
-      {/* Usage Statistics */}
+      {/* Enhanced Usage Statistics */}
       {analysis && (
         <div style={{
           background: 'rgba(255,255,255,0.1)',
@@ -694,7 +787,8 @@ const NovelBERTProblemSolver = () => {
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-            gap: '15px'
+            gap: '15px',
+            marginBottom: '20px'
           }}>
             <div>
               <div style={{ fontSize: '2em', fontWeight: 'bold' }}>
@@ -707,7 +801,7 @@ const NovelBERTProblemSolver = () => {
                 {analysis.recommendations ? 
                   Object.values(analysis.recommendations).flat().length : 0}
               </div>
-              <div style={{ opacity: 0.8 }}>Recommendations</div>
+              <div style={{ opacity: 0.8 }}>Total Recommendations</div>
             </div>
             <div>
               <div style={{ fontSize: '2em', fontWeight: 'bold' }}>
@@ -716,6 +810,42 @@ const NovelBERTProblemSolver = () => {
               <div style={{ opacity: 0.8 }}>Confidence</div>
             </div>
           </div>
+          
+          {/* Recommendation Categories Breakdown */}
+          {analysis.recommendations && (
+            <div style={{ marginTop: '20px' }}>
+              <h4 style={{ marginBottom: '15px', color: '#e5e7eb' }}>
+                📋 Recommendation Categories
+              </h4>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+                gap: '10px'
+              }}>
+                {Object.entries(analysis.recommendations).map(([category, recs]) => 
+                  recs.length > 0 && (
+                    <div key={category} style={{
+                      background: 'rgba(255,255,255,0.1)',
+                      padding: '10px',
+                      borderRadius: '8px',
+                      border: '1px solid rgba(255,255,255,0.2)'
+                    }}>
+                      <div style={{ fontSize: '1.5em', fontWeight: 'bold' }}>
+                        {recs.length}
+                      </div>
+                      <div style={{ 
+                        fontSize: '0.85em', 
+                        opacity: 0.9,
+                        textTransform: 'capitalize'
+                      }}>
+                        {category.replace(/([A-Z])/g, ' $1').trim()}
+                      </div>
+                    </div>
+                  )
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

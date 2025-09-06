@@ -1330,96 +1330,114 @@ const VoiceEmotionSystem = ({ onEmotionDetected, isVisible }) => {
           const voiceData = voiceEngine.current.getLatestAnalysis();
           
           try {
-            // Use enhanced async emotion detection with BERT
-            const detectedEmotions = await emotionEngine.current.detectEmotion(voiceData, transcript);
+            // 🎯 ENHANCED: Use current transcript even if partial
+            const currentTranscript = transcript.trim() || 'analyzing voice...';
             
-            setVoiceFeatures(voiceData);
-            setEmotions(detectedEmotions);
-            
-            // Find dominant emotion with enhanced confidence weighting
-            let maxScore = 0;
-            let dominant = 'neutral';
-            Object.entries(detectedEmotions).forEach(([emotion, data]) => {
-              // Use combination of percentage and confidence for better selection
-              const score = data.percentage * (data.confidence / 100);
-              if (score > maxScore) {
-                maxScore = score;
-                dominant = emotion;
-              }
+            console.log('🔄 Real-time analysis:', {
+              transcript: currentTranscript.substring(0, 50) + '...',
+              voiceData: voiceData ? 'available' : 'none'
             });
-            setDominantEmotion(dominant);
             
-            // Emit to parent component with enhanced data
-            if (onEmotionDetected) {
-              onEmotionDetected({
-                emotions: detectedEmotions,
-                dominantEmotion: dominant,
-                voiceFeatures: voiceData,
-                transcript,
-                timestamp: Date.now(),
-                enhancedAnalysis: true,
-                confidence: detectedEmotions[dominant]?.confidence || 0
+            // Use enhanced async emotion detection with BERT
+            const detectedEmotions = await emotionEngine.current.detectEmotion(voiceData, currentTranscript);
+            
+            // Only update if we have meaningful emotions detected
+            if (detectedEmotions && Object.keys(detectedEmotions).length > 0) {
+              setVoiceFeatures(voiceData);
+              setEmotions(detectedEmotions);
+              
+              // Find dominant emotion with enhanced confidence weighting
+              let maxScore = 0;
+              let dominant = 'neutral';
+              Object.entries(detectedEmotions).forEach(([emotion, data]) => {
+                // Use combination of percentage and confidence for better selection
+                const score = data.percentage * (data.confidence / 100);
+                if (score > maxScore) {
+                  maxScore = score;
+                  dominant = emotion;
+                }
               });
-            }
-            
-            // Send recording data to server (throttled to avoid spam)
-            if (serverConnector.current && dominant !== 'neutral') {
-              // Only send significant emotional changes to avoid server spam
-              const currentTime = Date.now();
-              const lastServerUpdate = analysisInterval._lastServerUpdate || 0;
+              setDominantEmotion(dominant);
               
-              if (currentTime - lastServerUpdate > 5000) { // Send every 5 seconds max
-                analysisInterval._lastServerUpdate = currentTime;
+              console.log('✅ Real-time emotions updated:', dominant, detectedEmotions[dominant]?.percentage + '%');
+              
+              // Emit to parent component with enhanced data
+              if (onEmotionDetected) {
+                onEmotionDetected({
+                  emotions: detectedEmotions,
+                  dominantEmotion: dominant,
+                  voiceFeatures: voiceData,
+                  transcript: currentTranscript,
+                  timestamp: Date.now(),
+                  enhancedAnalysis: true,
+                  confidence: detectedEmotions[dominant]?.confidence || 0,
+                  isRealTime: true
+                });
+              }
+              
+              // Send recording data to server (throttled to avoid spam)
+              if (serverConnector.current && dominant !== 'neutral') {
+                // Only send significant emotional changes to avoid server spam
+                const currentTime = Date.now();
+                const lastServerUpdate = analysisInterval._lastServerUpdate || 0;
                 
-                try {
-                  serverConnector.current.sendRecording({
-                    emotion: dominant,
-                    transcript: transcript,
-                    confidence: detectedEmotions[dominant]?.confidence || 0,
-                    duration: voiceData.duration || 0,
-                    features: voiceData
-                  }).catch(err => {
-                    console.warn('⚠️ Recording data upload failed:', err);
-                  });
-                } catch (serverError) {
-                  console.warn('⚠️ Server recording error:', serverError);
+                if (currentTime - lastServerUpdate > 5000) { // Send every 5 seconds max
+                  analysisInterval._lastServerUpdate = currentTime;
+                  
+                  try {
+                    serverConnector.current.sendRecording({
+                      emotion: dominant,
+                      transcript: currentTranscript,
+                      confidence: detectedEmotions[dominant]?.confidence || 0,
+                      duration: voiceData.duration || 0,
+                      features: voiceData,
+                      isRealTime: true
+                    }).catch(err => {
+                      console.warn('⚠️ Recording data upload failed:', err);
+                    });
+                  } catch (serverError) {
+                    console.warn('⚠️ Server recording error:', serverError);
+                  }
                 }
               }
-            }
-            
-            // Send via Netlify data sender (for deployment)
-            if (netlifyDataSender.current && dominant !== 'neutral') {
-              const currentTime = Date.now();
-              const lastNetlifyUpdate = analysisInterval._lastNetlifyUpdate || 0;
               
-              if (currentTime - lastNetlifyUpdate > 8000) { // Send every 8 seconds max
-                analysisInterval._lastNetlifyUpdate = currentTime;
+              // Send via Netlify data sender (for deployment)
+              if (netlifyDataSender.current && dominant !== 'neutral') {
+                const currentTime = Date.now();
+                const lastNetlifyUpdate = analysisInterval._lastNetlifyUpdate || 0;
                 
-                try {
-                  netlifyDataSender.current.sendToLaptop({
-                    type: 'live_recording',
-                    emotion: dominant,
-                    transcript: transcript,
-                    confidence: detectedEmotions[dominant]?.confidence || 0,
-                    duration: voiceData.duration || 0,
-                    features: voiceData
-                  }).catch(err => {
-                    console.warn('⚠️ Netlify recording data failed:', err);
-                  });
-                } catch (netlifyError) {
-                  console.warn('⚠️ Netlify recording error:', netlifyError);
+                if (currentTime - lastNetlifyUpdate > 8000) { // Send every 8 seconds max
+                  analysisInterval._lastNetlifyUpdate = currentTime;
+                  
+                  try {
+                    netlifyDataSender.current.sendToLaptop({
+                      type: 'live_recording',
+                      emotion: dominant,
+                      transcript: currentTranscript,
+                      confidence: detectedEmotions[dominant]?.confidence || 0,
+                      duration: voiceData.duration || 0,
+                      features: voiceData,
+                      isRealTime: true
+                    }).catch(err => {
+                      console.warn('⚠️ Netlify recording data failed:', err);
+                    });
+                  } catch (netlifyError) {
+                    console.warn('⚠️ Netlify recording error:', netlifyError);
+                  }
                 }
               }
+            } else {
+              console.log('⚠️ No meaningful emotions detected in real-time analysis');
             }
           } catch (error) {
             console.error('❌ Enhanced emotion detection failed:', error);
             // Fallback to basic analysis
-            const basicEmotions = { neutral: { percentage: 60, confidence: 40, enhancedAnalysis: false } };
-            setEmotions(basicEmotions);
+            const fallbackEmotions = { neutral: { percentage: 60, confidence: 40, enhancedAnalysis: false } };
+            setEmotions(fallbackEmotions);
             setDominantEmotion('neutral');
           }
         }
-      }, 300); // Slightly faster for better responsiveness
+      }, 500); // Slightly slower for better stability
       
       return () => clearInterval(analysisInterval);
     }
@@ -1880,7 +1898,7 @@ const VoiceEmotionSystem = ({ onEmotionDetected, isVisible }) => {
     });
   }, []);
   
-  const handleStopRecording = useCallback(() => {
+  const handleStopRecording = useCallback(async () => {
     console.log('⏹️ Stopping recording with conflict resolution...');
     
     voiceEngine.current?.stopAnalysis();
@@ -1891,8 +1909,102 @@ const VoiceEmotionSystem = ({ onEmotionDetected, isVisible }) => {
     }
     
     setIsRecording(false);
-    console.log('⏹️ Recording stopped');
-  }, []);
+    
+    // 🎯 TRIGGER FINAL EMOTION ANALYSIS WHEN RECORDING STOPS
+    console.log('🎭 Performing final emotion analysis...');
+    
+    // Get final transcript and voice features
+    const finalTranscript = transcript.trim();
+    const finalVoiceFeatures = voiceEngine.current?.getLatestFeatures() || voiceFeatures;
+    
+    if (finalTranscript && finalVoiceFeatures && Object.keys(finalVoiceFeatures).length > 0) {
+      try {
+        setSystemStatus('analyzing');
+        console.log('🧠 Analyzing final recording:', finalTranscript);
+        
+        // Perform comprehensive emotion analysis
+        const detectedEmotions = await emotionEngine.current.detectEmotion(
+          finalVoiceFeatures, 
+          finalTranscript, 
+          false // isFileAnalysis = false for live recording
+        );
+        
+        console.log('✅ Final emotion analysis complete:', detectedEmotions);
+        
+        // Update UI with final results
+        setEmotions(detectedEmotions);
+        const dominant = Object.keys(detectedEmotions).reduce((a, b) => 
+          detectedEmotions[a].percentage > detectedEmotions[b].percentage ? a : b
+        );
+        setDominantEmotion(dominant);
+        
+        // Notify parent component
+        if (onEmotionDetected) {
+          onEmotionDetected({
+            emotions: detectedEmotions,
+            dominantEmotion: dominant,
+            voiceFeatures: finalVoiceFeatures,
+            transcript: finalTranscript,
+            timestamp: Date.now(),
+            enhancedAnalysis: true,
+            confidence: detectedEmotions[dominant]?.confidence || 0,
+            isRecordingComplete: true
+          });
+        }
+        
+        // Send final recording data to server
+        if (serverConnector.current) {
+          try {
+            await serverConnector.current.sendRecording({
+              emotion: dominant,
+              transcript: finalTranscript,
+              confidence: detectedEmotions[dominant]?.confidence || 0,
+              duration: finalVoiceFeatures.duration || 0,
+              features: finalVoiceFeatures,
+              isComplete: true
+            });
+            console.log('📡 Final recording data sent to server');
+          } catch (serverError) {
+            console.warn('⚠️ Server recording upload failed:', serverError);
+          }
+        }
+        
+        // Send via Netlify data sender
+        if (netlifyDataSender.current) {
+          try {
+            await netlifyDataSender.current.sendToCloud({
+              type: 'completed_recording',
+              emotion: dominant,
+              transcript: finalTranscript,
+              confidence: detectedEmotions[dominant]?.confidence || 0,
+              duration: finalVoiceFeatures.duration || 0,
+              features: finalVoiceFeatures,
+              timestamp: new Date().toISOString()
+            });
+            console.log('🌐 Final recording data sent via Netlify');
+          } catch (netlifyError) {
+            console.warn('⚠️ Netlify recording upload failed:', netlifyError);
+          }
+        }
+        
+        setSystemStatus('ready');
+        console.log('🎉 Recording analysis complete!');
+        
+      } catch (analysisError) {
+        console.error('❌ Final emotion analysis failed:', analysisError);
+        // Fallback analysis
+        const fallbackEmotions = { neutral: { percentage: 70, confidence: 50, enhancedAnalysis: false } };
+        setEmotions(fallbackEmotions);
+        setDominantEmotion('neutral');
+        setSystemStatus('ready');
+      }
+    } else {
+      console.warn('⚠️ No transcript or voice features available for analysis');
+      setSystemStatus('ready');
+    }
+    
+    console.log('⏹️ Recording stopped and analyzed');
+  }, [transcript, voiceFeatures, onEmotionDetected]);
   
   // Training functions
   const handleTrainEmotion = useCallback(() => {

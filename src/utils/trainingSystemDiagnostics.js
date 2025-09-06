@@ -255,7 +255,7 @@ export class TrainingServerConnection {
     formData.append('transcript', transcript || '');
 
     try {
-      const response = await fetch(`${this.serverUrl}/upload`, {
+      const response = await fetch(`${this.serverUrl}/api/upload`, {
         method: 'POST',
         body: formData
       });

@@ -239,7 +239,7 @@ export default class NovelBERTEnhancementSystem {
 
       // Process BERT results into your format
       const emotions = this.processBERTEmotions(emotionResult, sentimentResult, text);
-      const recommendations = this.generateRecommendations(emotions, context);
+      const recommendations = this.generateRecommendations(emotions, context, text);
 
       const result = {
         emotions,
@@ -272,7 +272,7 @@ export default class NovelBERTEnhancementSystem {
     console.log('📋 Using enhanced fallback analysis');
     
     const emotions = this.keywordBasedEmotions(text);
-    const recommendations = this.generateRecommendations(emotions, context);
+    const recommendations = this.generateRecommendations(emotions, context, text);
 
     return {
       emotions,
@@ -457,50 +457,444 @@ export default class NovelBERTEnhancementSystem {
     return emotions;
   }
 
-  // Generate recommendations based on emotions
-  generateRecommendations(emotions, context) {
+  // Generate comprehensive recommendations based on emotions and text content
+  generateRecommendations(emotions, context, originalText = '') {
     const recommendations = {
       immediate: [],
       support: [],
-      engagement: []
+      engagement: [],
+      learning: [],
+      communication: [],
+      wellness: []
     };
 
-    // Find dominant emotion
-    const dominantEmotion = Object.entries(emotions)
-      .sort(([,a], [,b]) => b - a)[0];
+    // Find dominant emotions (top 3)
+    const sortedEmotions = Object.entries(emotions)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, 3);
 
-    if (dominantEmotion) {
-      const [emotion, score] = dominantEmotion;
-      
-      if (score > 0.7) {
-        if (emotion.includes('stress') || emotion.includes('overwhelm')) {
-          recommendations.immediate.push({
-            action: 'Take immediate stress management steps',
-            priority: 'high',
-            type: 'immediate'
-          });
-          recommendations.support.push({
-            action: 'Consider professional stress counseling',
-            priority: 'medium',
-            type: 'support'
-          });
-        } else if (emotion.includes('anger') || emotion.includes('negative')) {
-          recommendations.immediate.push({
-            action: 'Address concerns with appropriate escalation',
-            priority: 'critical',
-            type: 'immediate'
-          });
-        } else if (emotion.includes('positive')) {
-          recommendations.engagement.push({
-            action: 'Maintain positive momentum',
-            priority: 'medium',
-            type: 'engagement'
-          });
-        }
+    console.log('🎯 Generating recommendations for emotions:', sortedEmotions.map(([e, s]) => `${e}: ${(s*100).toFixed(1)}%`));
+
+    // Analyze text content for additional context
+    const textLower = (originalText || '').toLowerCase();
+    const words = textLower.split(/\s+/);
+    
+    // Keyword analysis for better recommendations
+    const keywordAnalysis = {
+      urgency: this.checkUrgencyKeywords(textLower),
+      timeframe: this.extractTimeframe(textLower),
+      domain: this.identifyDomain(textLower, context.domain),
+      actionNeeded: this.checkActionKeywords(textLower),
+      supportLevel: this.assessSupportNeeds(sortedEmotions, textLower)
+    };
+
+    console.log('📊 Keyword analysis:', keywordAnalysis);
+
+    // Generate recommendations for each dominant emotion
+    sortedEmotions.forEach(([emotion, score], index) => {
+      if (score > 0.3) { // Lower threshold for more inclusive recommendations
+        this.generateEmotionSpecificRecommendations(
+          emotion, score, recommendations, keywordAnalysis, context, index === 0
+        );
       }
+    });
+
+    // Generate domain-specific recommendations
+    this.generateDomainSpecificRecommendations(
+      recommendations, context.domain, keywordAnalysis, textLower
+    );
+
+    // Generate text-content based recommendations
+    this.generateContentBasedRecommendations(
+      recommendations, textLower, keywordAnalysis
+    );
+
+    // Add general wellness recommendations if emotional intensity is high
+    const maxEmotionScore = Math.max(...Object.values(emotions));
+    if (maxEmotionScore > 0.6) {
+      this.addWellnessRecommendations(recommendations, sortedEmotions);
     }
 
+    console.log('✅ Generated recommendations:', {
+      immediate: recommendations.immediate.length,
+      support: recommendations.support.length,
+      engagement: recommendations.engagement.length,
+      learning: recommendations.learning.length,
+      communication: recommendations.communication.length,
+      wellness: recommendations.wellness.length
+    });
+
     return recommendations;
+  }
+
+  // Check for urgency indicators in text
+  checkUrgencyKeywords(text) {
+    const urgencyWords = [
+      'urgent', 'emergency', 'immediately', 'asap', 'critical', 'deadline',
+      'tomorrow', 'today', 'now', 'quick', 'fast', 'help', 'crisis'
+    ];
+    const matches = urgencyWords.filter(word => text.includes(word));
+    return {
+      hasUrgency: matches.length > 0,
+      urgencyLevel: matches.length > 2 ? 'high' : matches.length > 0 ? 'medium' : 'low',
+      keywords: matches
+    };
+  }
+
+  // Extract timeframe from text
+  extractTimeframe(text) {
+    if (text.includes('now') || text.includes('immediately')) return 'immediate';
+    if (text.includes('today') || text.includes('tonight')) return 'today';
+    if (text.includes('tomorrow') || text.includes('24 hours')) return 'tomorrow';
+    if (text.includes('week') || text.includes('days')) return 'week';
+    if (text.includes('month')) return 'month';
+    return 'flexible';
+  }
+
+  // Identify domain from text content
+  identifyDomain(text, contextDomain) {
+    const domainKeywords = {
+      healthcare: ['pain', 'symptoms', 'doctor', 'medical', 'health', 'illness', 'treatment'],
+      education: ['exam', 'study', 'homework', 'grade', 'class', 'learning', 'teacher', 'school'],
+      business: ['work', 'project', 'deadline', 'meeting', 'client', 'boss', 'office', 'professional'],
+      mentalHealth: ['depression', 'anxiety', 'stress', 'overwhelm', 'therapy', 'counseling', 'mental'],
+      relationship: ['friend', 'family', 'partner', 'relationship', 'conflict', 'argument', 'love'],
+      financial: ['money', 'budget', 'debt', 'payment', 'financial', 'cost', 'expensive']
+    };
+
+    for (const [domain, keywords] of Object.entries(domainKeywords)) {
+      if (keywords.some(keyword => text.includes(keyword))) {
+        return domain;
+      }
+    }
+    
+    return contextDomain || 'general';
+  }
+
+  // Check for action-oriented keywords
+  checkActionKeywords(text) {
+    const actionWords = [
+      'need', 'want', 'should', 'must', 'have to', 'require', 'looking for',
+      'seeking', 'trying to', 'attempting', 'planning', 'hoping'
+    ];
+    return actionWords.filter(word => text.includes(word));
+  }
+
+  // Assess what level of support is needed
+  assessSupportNeeds(emotions, text) {
+    const highSupportEmotions = ['sadness', 'anger', 'fear', 'disgust', 'stress', 'overwhelm'];
+    const supportKeywords = ['help', 'support', 'assistance', 'guidance', 'advice'];
+    
+    const hasHighEmotions = emotions.some(([emotion]) => 
+      highSupportEmotions.some(high => emotion.includes(high))
+    );
+    const hasSupportKeywords = supportKeywords.some(word => text.includes(word));
+    
+    if (hasHighEmotions && hasSupportKeywords) return 'high';
+    if (hasHighEmotions || hasSupportKeywords) return 'medium';
+    return 'low';
+  }
+
+  // Generate emotion-specific recommendations
+  generateEmotionSpecificRecommendations(emotion, score, recommendations, keywordAnalysis, context, isDominant) {
+    const intensity = score > 0.8 ? 'high' : score > 0.5 ? 'medium' : 'low';
+    const priority = isDominant ? 'high' : 'medium';
+
+    // Handle different emotion types
+    if (emotion.includes('joy') || emotion.includes('happiness') || emotion.includes('positive')) {
+      recommendations.engagement.push({
+        action: `Celebrate and maintain this positive energy - ${emotion} detected at ${(score*100).toFixed(1)}%`,
+        priority: 'medium',
+        type: 'positive_reinforcement',
+        confidence: score
+      });
+      
+      recommendations.communication.push({
+        action: 'Share your positive experience with others to multiply the joy',
+        priority: 'low',
+        type: 'social_sharing',
+        confidence: score * 0.8
+      });
+    }
+    
+    else if (emotion.includes('anger') || emotion.includes('frustration') || emotion.includes('annoyance')) {
+      recommendations.immediate.push({
+        action: `Address the source of ${emotion} - take a moment to cool down before responding`,
+        priority: intensity === 'high' ? 'critical' : 'high',
+        type: 'emotion_regulation',
+        confidence: score
+      });
+      
+      recommendations.communication.push({
+        action: 'Express your concerns constructively using "I" statements',
+        priority: priority,
+        type: 'communication_strategy',
+        confidence: score * 0.9
+      });
+      
+      if (intensity === 'high') {
+        recommendations.wellness.push({
+          action: 'Practice breathing exercises or take a short walk to manage intense anger',
+          priority: 'high',
+          type: 'immediate_wellness',
+          confidence: score
+        });
+      }
+    }
+    
+    else if (emotion.includes('sad') || emotion.includes('grief') || emotion.includes('disappointed')) {
+      recommendations.support.push({
+        action: `Acknowledge your ${emotion} feelings as valid and seek emotional support`,
+        priority: intensity === 'high' ? 'high' : 'medium',
+        type: 'emotional_support',
+        confidence: score
+      });
+      
+      recommendations.wellness.push({
+        action: 'Engage in self-care activities that bring you comfort',
+        priority: 'medium',
+        type: 'self_care',
+        confidence: score * 0.8
+      });
+      
+      if (intensity === 'high') {
+        recommendations.immediate.push({
+          action: 'Consider reaching out to a friend, family member, or counselor',
+          priority: 'high',
+          type: 'crisis_support',
+          confidence: score
+        });
+      }
+    }
+    
+    else if (emotion.includes('fear') || emotion.includes('anxiety') || emotion.includes('worry')) {
+      recommendations.immediate.push({
+        action: `Address your ${emotion} by breaking down the situation into manageable steps`,
+        priority: intensity === 'high' ? 'critical' : 'high',
+        type: 'anxiety_management',
+        confidence: score
+      });
+      
+      recommendations.learning.push({
+        action: 'Learn about the source of your concern to reduce uncertainty',
+        priority: 'medium',
+        type: 'information_gathering',
+        confidence: score * 0.7
+      });
+      
+      recommendations.wellness.push({
+        action: 'Practice grounding techniques: name 5 things you can see, 4 you can touch, 3 you can hear',
+        priority: 'high',
+        type: 'grounding_technique',
+        confidence: score * 0.9
+      });
+    }
+    
+    else if (emotion.includes('surprise') || emotion.includes('confusion')) {
+      recommendations.learning.push({
+        action: `Take time to process this ${emotion} and gather more information`,
+        priority: 'medium',
+        type: 'information_processing',
+        confidence: score
+      });
+      
+      recommendations.communication.push({
+        action: 'Ask clarifying questions to better understand the situation',
+        priority: 'medium',
+        type: 'clarification_seeking',
+        confidence: score * 0.8
+      });
+    }
+    
+    else if (emotion.includes('disgust') || emotion.includes('contempt')) {
+      recommendations.immediate.push({
+        action: `Examine the source of your ${emotion} and consider if action is needed`,
+        priority: 'medium',
+        type: 'situation_assessment',
+        confidence: score
+      });
+      
+      recommendations.communication.push({
+        action: 'Express your concerns professionally and constructively',
+        priority: 'medium',
+        type: 'professional_communication',
+        confidence: score * 0.8
+      });
+    }
+    
+    else {
+      // Generic recommendation for any other emotion
+      recommendations.engagement.push({
+        action: `Acknowledge your ${emotion} feelings and consider what response would be most helpful`,
+        priority: 'medium',
+        type: 'general_awareness',
+        confidence: score * 0.7
+      });
+    }
+  }
+
+  // Generate domain-specific recommendations
+  generateDomainSpecificRecommendations(recommendations, domain, keywordAnalysis, text) {
+    switch (domain) {
+      case 'healthcare':
+        if (keywordAnalysis.urgency.hasUrgency) {
+          recommendations.immediate.push({
+            action: 'Seek immediate medical attention if experiencing severe symptoms',
+            priority: 'critical',
+            type: 'medical_emergency',
+            confidence: 0.9
+          });
+        }
+        recommendations.support.push({
+          action: 'Consult with healthcare professionals for proper guidance',
+          priority: 'high',
+          type: 'medical_consultation',
+          confidence: 0.8
+        });
+        break;
+        
+      case 'education':
+        if (text.includes('exam') || text.includes('test')) {
+          recommendations.learning.push({
+            action: 'Create a structured study plan with specific time blocks',
+            priority: 'high',
+            type: 'academic_planning',
+            confidence: 0.8
+          });
+        }
+        if (text.includes('understand') || text.includes('confused')) {
+          recommendations.support.push({
+            action: 'Seek help from teachers, tutors, or study groups',
+            priority: 'medium',
+            type: 'academic_support',
+            confidence: 0.8
+          });
+        }
+        break;
+        
+      case 'business':
+        if (keywordAnalysis.urgency.hasUrgency) {
+          recommendations.immediate.push({
+            action: 'Prioritize critical tasks and communicate delays if necessary',
+            priority: 'critical',
+            type: 'business_triage',
+            confidence: 0.85
+          });
+        }
+        recommendations.communication.push({
+          action: 'Keep stakeholders informed of progress and challenges',
+          priority: 'high',
+          type: 'stakeholder_communication',
+          confidence: 0.8
+        });
+        break;
+        
+      case 'mentalHealth':
+        recommendations.support.push({
+          action: 'Consider speaking with a mental health professional',
+          priority: 'high',
+          type: 'professional_mental_health',
+          confidence: 0.9
+        });
+        recommendations.wellness.push({
+          action: 'Practice daily mindfulness or meditation exercises',
+          priority: 'medium',
+          type: 'mindfulness_practice',
+          confidence: 0.8
+        });
+        break;
+        
+      case 'social':
+        if (text.includes('conflict') || text.includes('argument')) {
+          recommendations.communication.push({
+            action: 'Approach the conversation with empathy and openness',
+            priority: 'high',
+            type: 'conflict_resolution',
+            confidence: 0.8
+          });
+        }
+        recommendations.engagement.push({
+          action: 'Focus on maintaining healthy relationships through active listening',
+          priority: 'medium',
+          type: 'relationship_building',
+          confidence: 0.7
+        });
+        break;
+    }
+  }
+
+  // Generate content-based recommendations
+  generateContentBasedRecommendations(recommendations, text, keywordAnalysis) {
+    // Time-sensitive recommendations
+    if (keywordAnalysis.timeframe === 'immediate') {
+      recommendations.immediate.push({
+        action: 'Focus on the most critical action you can take right now',
+        priority: 'critical',
+        type: 'immediate_action',
+        confidence: 0.8
+      });
+    }
+    
+    // Problem-solving recommendations
+    if (text.includes('problem') || text.includes('issue') || text.includes('challenge')) {
+      recommendations.learning.push({
+        action: 'Break down the problem into smaller, manageable components',
+        priority: 'high',
+        type: 'problem_solving',
+        confidence: 0.8
+      });
+    }
+    
+    // Decision-making recommendations
+    if (text.includes('decide') || text.includes('choice') || text.includes('option')) {
+      recommendations.learning.push({
+        action: 'List pros and cons for each option before making a decision',
+        priority: 'medium',
+        type: 'decision_making',
+        confidence: 0.7
+      });
+    }
+    
+    // Communication needs
+    if (keywordAnalysis.actionNeeded.some(word => ['help', 'support', 'advice'].includes(word))) {
+      recommendations.communication.push({
+        action: 'Clearly communicate your specific needs when asking for help',
+        priority: 'medium',
+        type: 'help_seeking',
+        confidence: 0.8
+      });
+    }
+  }
+
+  // Add wellness recommendations for high emotional states
+  addWellnessRecommendations(recommendations, emotions) {
+    const hasNegativeEmotion = emotions.some(([emotion]) => 
+      ['anger', 'sad', 'fear', 'anxiety', 'stress'].some(neg => emotion.includes(neg))
+    );
+    
+    if (hasNegativeEmotion) {
+      recommendations.wellness.push({
+        action: 'Take 5 deep breaths and pause before taking any major actions',
+        priority: 'high',
+        type: 'breathing_exercise',
+        confidence: 0.9
+      });
+      
+      recommendations.wellness.push({
+        action: 'Consider doing something nurturing for yourself within the next hour',
+        priority: 'medium',
+        type: 'immediate_self_care',
+        confidence: 0.8
+      });
+    }
+    
+    // Always add a general wellness recommendation
+    recommendations.wellness.push({
+      action: 'Remember that emotions are temporary and this feeling will pass',
+      priority: 'low',
+      type: 'emotional_perspective',
+      confidence: 0.7
+    });
   }
 
   // Calculate confidence from BERT results with enhanced scoring
@@ -526,7 +920,7 @@ export default class NovelBERTEnhancementSystem {
     
     // Get enhanced emotion detection
     const emotions = this.keywordBasedEmotions(text);
-    const recommendations = this.generateRecommendations(emotions, context);
+    const recommendations = this.generateRecommendations(emotions, context, text);
     
     // Calculate high confidence based on emotion detection quality
     let confidence = 0.85; // Start with high base confidence

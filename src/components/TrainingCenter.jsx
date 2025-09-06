@@ -88,7 +88,31 @@ class VoiceSampleStorage {
   async getSamplesByUploadStatus(status) {
     await this.initPromise;
     const all = await this.getVoiceSamples();
-    return all.filter(s => s.uploadStatus === status);
+    return all.filter(s => (s.uploadStatus || 'pending') === status);
+  }
+
+  async migrateExistingSamples() {
+    await this.initPromise;
+    const all = await this.getVoiceSamples();
+    const needsMigration = all.filter(s => !s.uploadStatus);
+    
+    if (needsMigration.length > 0) {
+      console.log(`Migrating ${needsMigration.length} samples to add uploadStatus`);
+      const transaction = this.db.transaction(['voiceSamples'], 'readwrite');
+      const store = transaction.objectStore('voiceSamples');
+      
+      for (const sample of needsMigration) {
+        sample.uploadStatus = 'pending'; // Default to pending for existing samples
+        store.put(sample);
+      }
+      
+      return new Promise((resolve, reject) => {
+        transaction.oncomplete = () => resolve(needsMigration.length);
+        transaction.onerror = () => reject(transaction.error);
+      });
+    }
+    
+    return 0;
   }
 
   async getVoiceSamples(emotion = null) {
@@ -1297,17 +1321,80 @@ const TrainingCenter = ({ analyzer = null, currentTranscript = '', isRecording =
     return () => clearInterval(interval);
   }, [activeAnalyzer]);
 
+  // Enhanced function to test server connectivity
+  const testServerConnection = async () => {
+    try {
+      console.log('🔧 Testing server connection...');
+      const healthResponse = await fetch('http://localhost:4000/api/health');
+      if (healthResponse.ok) {
+        const healthData = await healthResponse.json();
+        console.log('✅ Server is healthy:', healthData);
+        return true;
+      } else {
+        console.error('❌ Server health check failed:', healthResponse.status);
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ Server connection failed:', error);
+      return false;
+    }
+  };
+
+  // Enhanced function to fetch server data
+  const fetchServerData = async () => {
+    try {
+      const response = await fetch('http://localhost:4000/api/data/all');
+      if (response.ok) {
+        const data = await response.json();
+        console.log('📊 Server Data:', data);
+        
+        // Calculate statistics from server data
+        const emotionCounts = {};
+        data.metadata.forEach(item => {
+          if (item.emotion) {
+            emotionCounts[item.emotion] = (emotionCounts[item.emotion] || 0) + 1;
+          }
+        });
+        
+        setStorageStats({
+          totalSamples: data.metadata.length,
+          emotionCounts: emotionCounts,
+          lastUpdated: new Date().toISOString()
+        });
+        
+        return data;
+      }
+    } catch (error) {
+      console.error('Error fetching server data:', error);
+    }
+    return null;
+  };
+
   const updateStorageStats = async () => {
     if (!activeAnalyzer) return;
     
     try {
+      // First, migrate any existing samples that don't have uploadStatus
+      const migratedCount = await activeAnalyzer.trainingManager.voiceStorage.migrateExistingSamples();
+      if (migratedCount > 0) {
+        console.log(`Migrated ${migratedCount} voice samples to add upload status`);
+      }
+      
       const stats = {};
       for (const emotion of emotions) {
         const samples = await activeAnalyzer.getStoredVoiceSamples(emotion.id);
+        const uploadedSamples = samples.filter(s => (s.uploadStatus || 'pending') === 'uploaded');
+        const pendingSamples = samples.filter(s => (s.uploadStatus || 'pending') === 'pending');
+        const failedSamples = samples.filter(s => (s.uploadStatus || 'pending') === 'failed');
+        
         stats[emotion.id] = {
           voiceSamples: samples.length,
+          uploadedCount: uploadedSamples.length,
+          pendingCount: pendingSamples.length,
+          failedCount: failedSamples.length,
           totalSize: samples.reduce((sum, sample) => sum + (sample.audioBlob?.size || 0), 0),
-          lastSample: samples.length > 0 ? samples[samples.length - 1].timestamp : null
+          lastSample: samples.length > 0 ? samples[samples.length - 1].timestamp : null,
+          lastUploaded: uploadedSamples.length > 0 ? uploadedSamples[uploadedSamples.length - 1].timestamp : null
         };
       }
       setStorageStats(stats);
@@ -2266,11 +2353,20 @@ const TrainingCenter = ({ analyzer = null, currentTranscript = '', isRecording =
             <h4 style={{ margin: '0 0 12px 0', color: '#475569' }}>🎤 Voice Storage</h4>
             <div style={{ fontSize: '0.9em', color: '#64748b' }}>
               <div>Total Voice Samples: <strong>{Object.values(storageStats).reduce((sum, stat) => sum + (stat.voiceSamples || 0), 0)}</strong></div>
+              <div>Uploaded to Server: <strong style={{ color: '#16a34a' }}>{Object.values(storageStats).reduce((sum, stat) => sum + (stat.uploadedCount || 0), 0)}</strong></div>
+              <div>Pending Upload: <strong style={{ color: '#d97706' }}>{Object.values(storageStats).reduce((sum, stat) => sum + (stat.pendingCount || 0), 0)}</strong></div>
+              <div>Failed Upload: <strong style={{ color: '#dc2626' }}>{Object.values(storageStats).reduce((sum, stat) => sum + (stat.failedCount || 0), 0)}</strong></div>
               <div>Storage Size: <strong>{Math.round(Object.values(storageStats).reduce((sum, stat) => sum + (stat.totalSize || 0), 0) / 1024)}KB</strong></div>
               <div>Last Recording: <strong>
                 {Object.values(storageStats).reduce((latest, stat) => {
                   if (!stat.lastSample) return latest;
                   return !latest || new Date(stat.lastSample) > new Date(latest) ? stat.lastSample : latest;
+                }, null)?.split('T')[0] || 'Never'}
+              </strong></div>
+              <div>Last Upload: <strong>
+                {Object.values(storageStats).reduce((latest, stat) => {
+                  if (!stat.lastUploaded) return latest;
+                  return !latest || new Date(stat.lastUploaded) > new Date(latest) ? stat.lastUploaded : latest;
                 }, null)?.split('T')[0] || 'Never'}
               </strong></div>
             </div>
@@ -2362,7 +2458,11 @@ const TrainingCenter = ({ analyzer = null, currentTranscript = '', isRecording =
                   {stats.accuracy}% accuracy
                 </div>
                 <div style={{ fontSize: '0.8rem', marginBottom: '8px', opacity: 0.9 }}>
-                  📼 {storage.voiceSamples} voice recordings
+                  📼 {storage.voiceSamples} recordings
+                  <br />
+                  📤 {storage.uploadedCount || 0} uploaded
+                  {storage.pendingCount > 0 && <span style={{ color: '#f59e0b' }}> • {storage.pendingCount} pending</span>}
+                  {storage.failedCount > 0 && <span style={{ color: '#dc2626' }}> • {storage.failedCount} failed</span>}
                 </div>
                 <div style={{
                   background: 'rgba(255,255,255,0.3)',
@@ -2656,6 +2756,172 @@ const TrainingCenter = ({ analyzer = null, currentTranscript = '', isRecording =
         <h3 style={{ margin: '0 0 20px 0', color: '#1f2937' }}>
           💾 Training Data Management
         </h3>
+        
+        <div style={{
+          display: 'flex',
+          gap: '16px',
+          justifyContent: 'center',
+          flexWrap: 'wrap',
+          marginBottom: '20px'
+        }}>
+          <button
+            onClick={async () => {
+              setTrainingMessage('🔄 Refreshing upload statistics...');
+              await updateStorageStats();
+              await fetchServerData();
+              setTrainingMessage('✅ Upload statistics refreshed!');
+              setTimeout(() => setTrainingMessage(''), 2000);
+            }}
+            style={{
+              padding: '8px 16px',
+              fontSize: '0.9rem',
+              fontWeight: '600',
+              color: 'white',
+              background: 'linear-gradient(135deg, #10b981, #059669)',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer'
+            }}
+          >
+            🔄 Refresh Upload Stats
+          </button>
+          
+          <button
+            onClick={async () => {
+              if (!activeAnalyzer) {
+                setTrainingMessage('❌ No active analyzer found');
+                setTimeout(() => setTrainingMessage(''), 2000);
+                return;
+              }
+              
+              try {
+                // Debug training data
+                console.log('🐛 Debugging Training Data:');
+                console.log('Active Analyzer:', activeAnalyzer);
+                console.log('Training Manager:', activeAnalyzer.trainingManager);
+                
+                const stats = activeAnalyzer.getTrainingStats();
+                console.log('Training Stats:', stats);
+                
+                const trainingData = activeAnalyzer.trainingManager?.trainingData || {};
+                console.log('Raw Training Data:', trainingData);
+                
+                // Check voice storage
+                const allVoiceSamples = await activeAnalyzer.trainingManager?.voiceStorage?.getVoiceSamples() || [];
+                console.log('Voice Samples:', allVoiceSamples.length, allVoiceSamples);
+                
+                // Check localStorage
+                const localData = localStorage.getItem('voiceEmotionTrainingData');
+                console.log('LocalStorage Training Data:', localData ? JSON.parse(localData) : 'None');
+                
+                // Fetch server data
+                const serverData = await fetchServerData();
+                console.log('Server Data:', serverData);
+                
+                // Test server connectivity
+                const serverConnected = await testServerConnection();
+                console.log('Server Connected:', serverConnected);
+                
+                const message = `Debug Results:
+Training Stats: ${Object.keys(stats).length} emotions
+Voice Samples: ${allVoiceSamples.length} samples
+LocalStorage: ${localData ? 'Found' : 'Empty'}
+Server Uploads: ${serverData?.metadata?.length || 0} files
+Server Connected: ${serverConnected ? 'Yes' : 'No'}
+Check console for details`;
+                
+                setTrainingMessage(message);
+                setTimeout(() => setTrainingMessage(''), 5000);
+                
+              } catch (error) {
+                console.error('Debug error:', error);
+                setTrainingMessage('❌ Debug failed: ' + error.message);
+                setTimeout(() => setTrainingMessage(''), 3000);
+              }
+            }}
+            style={{
+              padding: '8px 16px',
+              fontSize: '0.9rem',
+              fontWeight: '600',
+              color: 'white',
+              background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer'
+            }}
+          >
+            🐛 Debug Training Data
+          </button>
+
+          <button
+            onClick={async () => {
+              if (!activeAnalyzer) {
+                setTrainingMessage('❌ No active analyzer');
+                setTimeout(() => setTrainingMessage(''), 2000);
+                return;
+              }
+              
+              setTrainingMessage('� Force refreshing all statistics...');
+              
+              try {
+                // Force refresh all statistics
+                setTrainingStats(activeAnalyzer.getTrainingStats());
+                setUserCalibration(activeAnalyzer.getUserCalibration());
+                setSessionStats(activeAnalyzer.getSessionStats());
+                await updateStorageStats();
+                
+                // Force save to localStorage
+                const exportData = activeAnalyzer.exportTrainingData();
+                localStorage.setItem('voiceEmotionTrainingData', JSON.stringify(exportData));
+                
+                setTrainingMessage('✅ All statistics force refreshed!');
+                setTimeout(() => setTrainingMessage(''), 2000);
+                
+              } catch (error) {
+                console.error('Force refresh error:', error);
+                setTrainingMessage('❌ Force refresh failed: ' + error.message);
+                setTimeout(() => setTrainingMessage(''), 3000);
+              }
+            }}
+            style={{
+              padding: '8px 16px',
+              fontSize: '0.9rem',
+              fontWeight: '600',
+              color: 'white',
+              background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer'
+            }}
+          >
+            🔄 Force Refresh All
+          </button>
+
+          <button
+            onClick={async () => {
+              setTrainingMessage('🔧 Testing server connection...');
+              const isConnected = await testServerConnection();
+              if (isConnected) {
+                setTrainingMessage('✅ Server connection successful!');
+              } else {
+                setTrainingMessage('❌ Server connection failed - check console');
+              }
+              setTimeout(() => setTrainingMessage(''), 3000);
+            }}
+            style={{
+              padding: '8px 16px',
+              fontSize: '0.9rem',
+              fontWeight: '600',
+              color: 'white',
+              background: 'linear-gradient(135deg, #06b6d4, #0891b2)',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer'
+            }}
+          >
+            🔧 Test Server
+          </button>
+        </div>
         
         <div style={{
           display: 'flex',
