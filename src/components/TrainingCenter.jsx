@@ -4,6 +4,7 @@ import { estimatePitchFromAudioBuffer } from '../utils/pitchEstimator';
 import { createModel, buildDataset, trainModel, saveModelLocal, loadModelLocal, predict, featuresToTensorRow } from '../utils/tfVoiceClassifier';
 import { fuseEmotionScores } from '../utils/emotionFusion';
 import { analyzeEmotionWithBERT } from '../utils/bertEmotionApi';
+import NetlifyModelDeployer from '../utils/netlifyModelDeployer.js';
 
 // Enhanced Voice Sample Storage with IndexedDB
 class VoiceSampleStorage {
@@ -1148,6 +1149,8 @@ const TrainingCenter = ({ analyzer = null, currentTranscript = '', isRecording =
   const [remoteUrl, setRemoteUrl] = useState(localStorage.getItem('remoteVoiceTrainingUrl') || 'http://localhost:4000/upload');
   const [remoteUploadEnabled, setRemoteUploadEnabled] = useState(Boolean(localStorage.getItem('remoteVoiceTrainingUrl')));
   const [remoteUploadStatus, setRemoteUploadStatus] = useState('');
+  const [netlifyDeployer] = useState(() => new NetlifyModelDeployer());
+  const [netlifyUrl, setNetlifyUrl] = useState(localStorage.getItem('netlifyDeploymentUrl') || '');
   const [audioPreviewUrl, setAudioPreviewUrl] = useState(null);
   const [audioBufferForPreview, setAudioBufferForPreview] = useState(null);
   const [trimStart, setTrimStart] = useState(0);
@@ -1338,6 +1341,106 @@ const TrainingCenter = ({ analyzer = null, currentTranscript = '', isRecording =
       console.error('❌ Server connection failed:', error);
       return false;
     }
+  };
+
+  // Deploy trained model to Netlify
+  const deployToNetlify = async () => {
+    if (!activeAnalyzer) {
+      setTrainingMessage('❌ No trained model to deploy');
+      setTimeout(() => setTrainingMessage(''), 2000);
+      return;
+    }
+
+    if (!netlifyUrl) {
+      setTrainingMessage('❌ Please set Netlify URL first');
+      setTimeout(() => setTrainingMessage(''), 2000);
+      return;
+    }
+
+    setTrainingMessage('🚀 Deploying model to Netlify...');
+
+    try {
+      netlifyDeployer.setNetlifyUrl(netlifyUrl);
+      
+      const trainingData = activeAnalyzer.exportTrainingData();
+      const modelWeights = activeAnalyzer.trainingManager.getModelWeights();
+      const userCalib = activeAnalyzer.getUserCalibration();
+      const sessStats = activeAnalyzer.getSessionStats();
+
+      const result = await netlifyDeployer.deployModel(
+        trainingData.trainingData,
+        modelWeights,
+        userCalib,
+        sessStats
+      );
+
+      if (result.success) {
+        setTrainingMessage(`✅ Model deployed! ID: ${result.deploymentId.slice(-8)}`);
+        console.log('🎉 Netlify deployment successful:', result);
+      } else {
+        setTrainingMessage(`❌ Deployment failed: ${result.error}`);
+      }
+      
+      setTimeout(() => setTrainingMessage(''), 5000);
+
+    } catch (error) {
+      console.error('Netlify deployment error:', error);
+      setTrainingMessage('❌ Deployment failed: ' + error.message);
+      setTimeout(() => setTrainingMessage(''), 3000);
+    }
+  };
+
+  // Download model from Netlify
+  const downloadFromNetlify = async () => {
+    if (!netlifyUrl) {
+      setTrainingMessage('❌ Please set Netlify URL first');
+      setTimeout(() => setTrainingMessage(''), 2000);
+      return;
+    }
+
+    setTrainingMessage('📥 Downloading model from Netlify...');
+
+    try {
+      netlifyDeployer.setNetlifyUrl(netlifyUrl);
+      const result = await netlifyDeployer.downloadModel();
+
+      if (result.success && activeAnalyzer) {
+        // Import the downloaded model
+        const modelData = result.model;
+        if (modelData.modelWeights) {
+          activeAnalyzer.trainingManager.modelWeights = modelData.modelWeights;
+          activeAnalyzer.trainingManager.saveModelWeights();
+        }
+        
+        setTrainingMessage(`✅ Model downloaded! Accuracy: ${modelData.metadata?.accuracy}%`);
+        console.log('📥 Model downloaded from Netlify:', result);
+        
+        // Refresh statistics
+        setTrainingStats(activeAnalyzer.getTrainingStats());
+        
+      } else {
+        setTrainingMessage(`❌ Download failed: ${result.error}`);
+      }
+      
+      setTimeout(() => setTrainingMessage(''), 5000);
+
+    } catch (error) {
+      console.error('Netlify download error:', error);
+      setTrainingMessage('❌ Download failed: ' + error.message);
+      setTimeout(() => setTrainingMessage(''), 3000);
+    }
+  };
+
+  // Save Netlify URL
+  const saveNetlifySettings = () => {
+    if (netlifyUrl) {
+      localStorage.setItem('netlifyDeploymentUrl', netlifyUrl);
+      setTrainingMessage('✅ Netlify URL saved');
+    } else {
+      localStorage.removeItem('netlifyDeploymentUrl');
+      setTrainingMessage('❌ Netlify URL removed');
+    }
+    setTimeout(() => setTrainingMessage(''), 2000);
   };
 
   // Enhanced function to fetch server data
@@ -3043,6 +3146,116 @@ Check console for details`;
             </button>
             <div style={{ minWidth: '80px', color: '#374151', fontWeight: 600 }}>{remoteUploadStatus}</div>
           </div>
+
+          {/* Netlify Deployment Section */}
+          <div style={{
+            background: 'linear-gradient(135deg, #f97316, #ea580c)',
+            borderRadius: '12px',
+            padding: '20px',
+            marginTop: '20px',
+            marginBottom: '20px',
+            color: 'white'
+          }}>
+            <h3 style={{ margin: '0 0 15px 0', display: 'flex', alignItems: 'center' }}>
+              🌐 Netlify Deployment
+              <span style={{ fontSize: '0.8rem', opacity: '0.8', marginLeft: '10px' }}>
+                Share your trained model globally
+              </span>
+            </h3>
+            
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '15px' }}>
+              <input
+                type="url"
+                value={netlifyUrl}
+                onChange={(e) => setNetlifyUrl(e.target.value)}
+                placeholder="https://your-app.netlify.app"
+                style={{
+                  flex: 1,
+                  padding: '8px 12px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  fontSize: '0.9rem',
+                  color: '#333'
+                }}
+              />
+              <button
+                onClick={saveNetlifySettings}
+                style={{
+                  padding: '8px 16px',
+                  background: 'rgba(255,255,255,0.2)',
+                  border: 'none',
+                  borderRadius: '6px',
+                  color: 'white',
+                  cursor: 'pointer',
+                  fontSize: '0.9rem'
+                }}
+              >
+                💾 Save URL
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              <button
+                onClick={deployToNetlify}
+                disabled={!netlifyUrl}
+                style={{
+                  padding: '10px 16px',
+                  background: netlifyUrl ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.1)',
+                  border: 'none',
+                  borderRadius: '6px',
+                  color: 'white',
+                  cursor: netlifyUrl ? 'pointer' : 'not-allowed',
+                  fontSize: '0.9rem',
+                  fontWeight: '600'
+                }}
+              >
+                🚀 Deploy Model
+              </button>
+              
+              <button
+                onClick={downloadFromNetlify}
+                disabled={!netlifyUrl}
+                style={{
+                  padding: '10px 16px',
+                  background: netlifyUrl ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.1)',
+                  border: 'none',
+                  borderRadius: '6px',
+                  color: 'white',
+                  cursor: netlifyUrl ? 'pointer' : 'not-allowed',
+                  fontSize: '0.9rem',
+                  fontWeight: '600'
+                }}
+              >
+                📥 Download Model
+              </button>
+
+              <button
+                onClick={() => {
+                  if (netlifyUrl) {
+                    window.open(`${netlifyUrl}/.netlify/functions/voice-model`, '_blank');
+                  }
+                }}
+                disabled={!netlifyUrl}
+                style={{
+                  padding: '10px 16px',
+                  background: netlifyUrl ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.1)',
+                  border: 'none',
+                  borderRadius: '6px',
+                  color: 'white',
+                  cursor: netlifyUrl ? 'pointer' : 'not-allowed',
+                  fontSize: '0.9rem',
+                  fontWeight: '600'
+                }}
+              >
+                🔗 View Public API
+              </button>
+            </div>
+
+            <div style={{ fontSize: '0.8rem', opacity: '0.8', marginTop: '10px' }}>
+              💡 Deploy your trained model to Netlify to share with others instantly!
+            </div>
+          </div>
+
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '8px' }}>
             <button
               onClick={async () => {
