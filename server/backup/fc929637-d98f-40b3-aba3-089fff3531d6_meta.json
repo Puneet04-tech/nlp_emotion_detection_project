@@ -1,0 +1,40 @@
+{
+  "id": "fc929637-d98f-40b3-aba3-089fff3531d6",
+  "sessionId": "6e6f377b-b339-42fa-96a2-b51bbd818378",
+  "timestamp": "2025-09-13T04:59:46.012Z",
+  "serverInfo": {
+    "hostname": "hp",
+    "ip": "::1",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+    "retryCount": 0
+  },
+  "file": {
+    "filename": "audio_1757739586010_5cd59fd0.wav",
+    "originalName": "sad_1757737684369_jjijun142.wav",
+    "size": 131704,
+    "mimetype": "audio/wav",
+    "path": "D:\\nlp_emotion_detection_project\\server\\uploads\\audio_1757739586010_5cd59fd0.wav",
+    "checksum": "e0d19abc9730a774cdf350d3a112347f"
+  },
+  "training": {
+    "emotion": "sad",
+    "transcript": "OAF_dead_sad.wav",
+    "confidence": 0,
+    "processingTime": 0
+  },
+  "analysis": {
+    "features": {},
+    "voiceFeatures": {
+      "pitch": 196,
+      "volume": 1,
+      "spectralCentroid": 16,
+      "duration": 2.696145124716553,
+      "sampleRate": 44100
+    },
+    "bertAnalysis": {},
+    "audioMetadata": {}
+  },
+  "bulkInfo": {
+    "isBulk": false
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "id": "4b27d942-783d-48ea-919a-cd9cbfe30f83",
+  "sessionId": "936f6442-d8c0-4f84-a4a0-63de6d49e759",
+  "timestamp": "2025-09-10T10:38:58.763Z",
+  "serverInfo": {
+    "hostname": "hp",
+    "ip": "::1",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+    "retryCount": 0
+  },
+  "file": {
+    "filename": "audio_1757500738754_7e1f7bfd.wav",
+    "originalName": "happy_1757500679413_ulov9s8lp.wav",
+    "size": 97758,
+    "mimetype": "audio/wav",
+    "path": "D:\\nlp_emotion_detection_project\\server\\uploads\\audio_1757500738754_7e1f7bfd.wav",
+    "checksum": "14759ca042f5338d0652fc363c099190"
+  },
+  "training": {
+    "emotion": "happy",
+    "transcript": "[object Object]",
+    "confidence": 0,
+    "processingTime": 0
+  },
+  "analysis": {
+    "features": {},
+    "voiceFeatures": {
+      "pitch": 216,
+      "volume": 0.02,
+      "spectralCentroid": 27,
+      "mfcc": []
+    },
+    "bertAnalysis": {},
+    "audioMetadata": {}
+  },
+  "bulkInfo": {
+    "isBulk": false
+  }
+}

@@ -1,0 +1,79 @@
+{
+  "id": "4c1e0cec-9aa5-4de8-990f-ebbf250fa732",
+  "sessionId": "9aea6dda-6075-4c6c-beec-2f972414ac16",
+  "timestamp": "2025-09-13T04:54:38.454Z",
+  "serverInfo": {
+    "hostname": "hp",
+    "ip": "::1",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+    "retryCount": 0
+  },
+  "file": {
+    "filename": "audio_1757739278449_1bb1d7cd.wav",
+    "originalName": "1757739278364.wav",
+    "size": 175684,
+    "mimetype": "audio/wav",
+    "path": "D:\\nlp_emotion_detection_project\\server\\uploads\\audio_1757739278449_1bb1d7cd.wav",
+    "checksum": "3b831cc541aad4318e9ee9dc6db4792b"
+  },
+  "training": {
+    "emotion": "surprised",
+    "transcript": "OAF_chair_ps.wav",
+    "confidence": 0,
+    "processingTime": 0
+  },
+  "analysis": {
+    "features": {},
+    "voiceFeatures": {
+      "pitch": 222.5,
+      "volume": 0.01087674637558325,
+      "spectralCentroid": 60.60950952198738,
+      "mfccMeans": [
+        46.94665443284215,
+        7.13124587239022,
+        -13.886283952627384,
+        -11.392574879478763,
+        -6.962993384472726,
+        2.9349134333837523,
+        3.0128064275812716,
+        0.07529415075478717,
+        2.8940414098011362,
+        2.4517779199043974,
+        1.9096425055216009,
+        2.814299002918209,
+        2.558570950495424
+      ],
+      "mfccVars": [
+        1015.2044892881589,
+        176.13159625205583,
+        459.58412347971586,
+        84.32334984486148,
+        80.65670960742638,
+        85.68146761327772,
+        31.076573610598153,
+        40.599595504237286,
+        52.86224084986149,
+        26.52090683513014,
+        46.93411115206717,
+        73.97282683498959,
+        72.94909159324142
+      ],
+      "pitchStats": {
+        "mean": 345.6341463414634,
+        "median": 222.5,
+        "std": 265.78464197014495,
+        "min": 83,
+        "max": 995,
+        "count": 82
+      },
+      "spectralRolloffMean": 16725.02051983585,
+      "energyMean": 0.01087674637558325,
+      "zcrMean": 0.06381808945155336
+    },
+    "bertAnalysis": {},
+    "audioMetadata": {}
+  },
+  "bulkInfo": {
+    "isBulk": false
+  }
+}

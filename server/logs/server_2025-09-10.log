@@ -1,0 +1,9 @@
+{"timestamp":"2025-09-10T10:17:40.168Z","level":"info","message":"Ultra-Reliable Server starting up"}
+{"timestamp":"2025-09-10T10:34:06.820Z","level":"info","message":"Ultra-Reliable Server starting up"}
+{"timestamp":"2025-09-10T10:36:38.735Z","level":"info","message":"Ultra-Reliable Server starting up"}
+{"timestamp":"2025-09-10T10:37:59.453Z","level":"info","message":"Upload request received","uploadId":"7d34894a-e094-4537-a836-510a664b5ae5","retryCount":0,"ip":"::1","userAgent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Sa"}
+{"timestamp":"2025-09-10T10:37:59.475Z","level":"info","message":"Upload request received","uploadId":"fb36fcf2-3d5a-4797-8e32-45adb691c5d6","retryCount":0,"ip":"::1","userAgent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Sa"}
+{"timestamp":"2025-09-10T10:37:59.513Z","level":"success","message":"Upload completed successfully","uploadId":"7d34894a-e094-4537-a836-510a664b5ae5","emotion":"happy","fileSize":97758,"filename":"1757500679413.wav"}
+{"timestamp":"2025-09-10T10:37:59.514Z","level":"success","message":"Upload completed successfully","uploadId":"fb36fcf2-3d5a-4797-8e32-45adb691c5d6","emotion":"happy","fileSize":192134,"filename":"1757500679413.wav"}
+{"timestamp":"2025-09-10T10:38:58.749Z","level":"info","message":"Upload request received","uploadId":"4b27d942-783d-48ea-919a-cd9cbfe30f83","retryCount":0,"ip":"::1","userAgent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Sa"}
+{"timestamp":"2025-09-10T10:38:58.788Z","level":"success","message":"Upload completed successfully","uploadId":"4b27d942-783d-48ea-919a-cd9cbfe30f83","emotion":"happy","fileSize":97758,"filename":"happy_1757500679413_ulov9s8lp.wav"}

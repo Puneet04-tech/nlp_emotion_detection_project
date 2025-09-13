@@ -1,0 +1,40 @@
+{
+  "id": "063d25c9-79bc-48fc-b503-6a9ed6103512",
+  "sessionId": "34694a1a-f1b1-4f21-a3e5-b0600a069658",
+  "timestamp": "2025-09-13T04:59:41.573Z",
+  "serverInfo": {
+    "hostname": "hp",
+    "ip": "::1",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+    "retryCount": 0
+  },
+  "file": {
+    "filename": "audio_1757739581568_a2d0eb3f.wav",
+    "originalName": "happy_1757736790565_s733ld591.wav",
+    "size": 96626,
+    "mimetype": "audio/wav",
+    "path": "D:\\nlp_emotion_detection_project\\server\\uploads\\audio_1757739581568_a2d0eb3f.wav",
+    "checksum": "e42608312fc8681982a8224924d53638"
+  },
+  "training": {
+    "emotion": "happy",
+    "transcript": "OAF_yes_happy.wav",
+    "confidence": 0,
+    "processingTime": 0
+  },
+  "analysis": {
+    "features": {},
+    "voiceFeatures": {
+      "pitch": 227,
+      "volume": 3,
+      "spectralCentroid": 29,
+      "duration": 1.9777551020408164,
+      "sampleRate": 44100
+    },
+    "bertAnalysis": {},
+    "audioMetadata": {}
+  },
+  "bulkInfo": {
+    "isBulk": false
+  }
+}

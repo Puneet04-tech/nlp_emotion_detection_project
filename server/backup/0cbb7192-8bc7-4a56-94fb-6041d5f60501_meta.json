@@ -1,0 +1,40 @@
+{
+  "id": "0cbb7192-8bc7-4a56-94fb-6041d5f60501",
+  "sessionId": "5c2794e2-b970-4dd3-aab7-d66df822fc79",
+  "timestamp": "2025-09-13T04:34:26.714Z",
+  "serverInfo": {
+    "hostname": "hp",
+    "ip": "::1",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+    "retryCount": 0
+  },
+  "file": {
+    "filename": "audio_1757738066710_d79329f4.wav",
+    "originalName": "neutral_1757737922678_tyx5f2244.wav",
+    "size": 100490,
+    "mimetype": "audio/wav",
+    "path": "D:\\nlp_emotion_detection_project\\server\\uploads\\audio_1757738066710_d79329f4.wav",
+    "checksum": "c6868a357de43b700544ac5dfd0aac80"
+  },
+  "training": {
+    "emotion": "neutral",
+    "transcript": "OAF_chalk_neutral.wav",
+    "confidence": 0,
+    "processingTime": 0
+  },
+  "analysis": {
+    "features": {},
+    "voiceFeatures": {
+      "pitch": 184,
+      "volume": 1,
+      "spectralCentroid": 32,
+      "duration": 2.0568934240362813,
+      "sampleRate": 44100
+    },
+    "bertAnalysis": {},
+    "audioMetadata": {}
+  },
+  "bulkInfo": {
+    "isBulk": false
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "id": "cce0a00c-3ca7-4645-9381-cb23810e0627",
+  "sessionId": "7aa2058d-5dbf-45f5-bfae-07946a9d0a53",
+  "timestamp": "2025-09-13T04:34:26.297Z",
+  "serverInfo": {
+    "hostname": "hp",
+    "ip": "::1",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+    "retryCount": 0
+  },
+  "file": {
+    "filename": "audio_1757738066293_d7fb680d.wav",
+    "originalName": "neutral_1757737921932_wdeq3sea2.wav",
+    "size": 113622,
+    "mimetype": "audio/wav",
+    "path": "D:\\nlp_emotion_detection_project\\server\\uploads\\audio_1757738066293_d7fb680d.wav",
+    "checksum": "01e78724be4f4cab153c7accbb140130"
+  },
+  "training": {
+    "emotion": "neutral",
+    "transcript": "OAF_chair_neutral.wav",
+    "confidence": 0,
+    "processingTime": 0
+  },
+  "analysis": {
+    "features": {},
+    "voiceFeatures": {
+      "pitch": 188,
+      "volume": 1,
+      "spectralCentroid": 32,
+      "duration": 2.325827664399093,
+      "sampleRate": 44100
+    },
+    "bertAnalysis": {},
+    "audioMetadata": {}
+  },
+  "bulkInfo": {
+    "isBulk": false
+  }
+}

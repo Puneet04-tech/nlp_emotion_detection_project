@@ -1,0 +1,40 @@
+{
+  "id": "6b7b5c83-b26e-4d81-9997-ced8af8fd9f5",
+  "sessionId": "9d7016c3-612c-4bab-9188-5f2b77fe3429",
+  "timestamp": "2025-09-13T04:34:29.298Z",
+  "serverInfo": {
+    "hostname": "hp",
+    "ip": "::1",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+    "retryCount": 0
+  },
+  "file": {
+    "filename": "audio_1757738069296_d02389bf.wav",
+    "originalName": "sad_1757737685573_jm8880gn9.wav",
+    "size": 117892,
+    "mimetype": "audio/wav",
+    "path": "D:\\nlp_emotion_detection_project\\server\\uploads\\audio_1757738069296_d02389bf.wav",
+    "checksum": "60972ef3e87dd072312e126fe8fc93c0"
+  },
+  "training": {
+    "emotion": "sad",
+    "transcript": "OAF_food_sad.wav",
+    "confidence": 0,
+    "processingTime": 0
+  },
+  "analysis": {
+    "features": {},
+    "voiceFeatures": {
+      "pitch": 177,
+      "volume": 1,
+      "spectralCentroid": 22,
+      "duration": 2.413265306122449,
+      "sampleRate": 44100
+    },
+    "bertAnalysis": {},
+    "audioMetadata": {}
+  },
+  "bulkInfo": {
+    "isBulk": false
+  }
+}

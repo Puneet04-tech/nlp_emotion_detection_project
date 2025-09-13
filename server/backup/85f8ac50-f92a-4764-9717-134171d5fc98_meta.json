@@ -1,0 +1,40 @@
+{
+  "id": "85f8ac50-f92a-4764-9717-134171d5fc98",
+  "sessionId": "95afff6c-a20f-4b71-9882-d7363b7afbb4",
+  "timestamp": "2025-09-13T04:59:41.436Z",
+  "serverInfo": {
+    "hostname": "hp",
+    "ip": "::1",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+    "retryCount": 0
+  },
+  "file": {
+    "filename": "audio_1757739581432_c5b48e72.wav",
+    "originalName": "happy_1757736790478_hqs562k55.wav",
+    "size": 105622,
+    "mimetype": "audio/wav",
+    "path": "D:\\nlp_emotion_detection_project\\server\\uploads\\audio_1757739581432_c5b48e72.wav",
+    "checksum": "89066e213dc60bfde91ee0334e756932"
+  },
+  "training": {
+    "emotion": "happy",
+    "transcript": "OAF_yearn_happy.wav",
+    "confidence": 0,
+    "processingTime": 0
+  },
+  "analysis": {
+    "features": {},
+    "voiceFeatures": {
+      "pitch": 231,
+      "volume": 3,
+      "spectralCentroid": 29,
+      "duration": 2.1619954648526076,
+      "sampleRate": 44100
+    },
+    "bertAnalysis": {},
+    "audioMetadata": {}
+  },
+  "bulkInfo": {
+    "isBulk": false
+  }
+}

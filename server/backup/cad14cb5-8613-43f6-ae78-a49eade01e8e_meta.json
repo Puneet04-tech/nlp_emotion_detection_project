@@ -1,0 +1,40 @@
+{
+  "id": "cad14cb5-8613-43f6-ae78-a49eade01e8e",
+  "sessionId": "2c22c37b-c43d-481c-bb51-b695deea7f88",
+  "timestamp": "2025-09-13T04:34:23.400Z",
+  "serverInfo": {
+    "hostname": "hp",
+    "ip": "::1",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+    "retryCount": 0
+  },
+  "file": {
+    "filename": "audio_1757738063395_68bdc831.wav",
+    "originalName": "happy_1757517385681_16grisw42.wav",
+    "size": 99424,
+    "mimetype": "audio/wav",
+    "path": "D:\\nlp_emotion_detection_project\\server\\uploads\\audio_1757738063395_68bdc831.wav",
+    "checksum": "4064edfcb1298d32829d19e5a0a6c626"
+  },
+  "training": {
+    "emotion": "happy",
+    "transcript": "OAF_bath_happy.wav",
+    "confidence": 0,
+    "processingTime": 0
+  },
+  "analysis": {
+    "features": {},
+    "voiceFeatures": {
+      "pitch": 248,
+      "volume": 2,
+      "spectralCentroid": 30,
+      "duration": 2.035041666666667,
+      "sampleRate": 48000
+    },
+    "bertAnalysis": {},
+    "audioMetadata": {}
+  },
+  "bulkInfo": {
+    "isBulk": false
+  }
+}

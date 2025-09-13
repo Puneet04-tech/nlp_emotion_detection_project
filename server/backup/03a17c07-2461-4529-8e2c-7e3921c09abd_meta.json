@@ -1,0 +1,40 @@
+{
+  "id": "03a17c07-2461-4529-8e2c-7e3921c09abd",
+  "sessionId": "b1c65703-b45d-409f-b222-3bbc2ec8000d",
+  "timestamp": "2025-09-13T04:34:27.122Z",
+  "serverInfo": {
+    "hostname": "hp",
+    "ip": "::1",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+    "retryCount": 0
+  },
+  "file": {
+    "filename": "audio_1757738067120_f2da0011.wav",
+    "originalName": "sad_1757737516848_ayp83l7uv.wav",
+    "size": 126452,
+    "mimetype": "audio/wav",
+    "path": "D:\\nlp_emotion_detection_project\\server\\uploads\\audio_1757738067120_f2da0011.wav",
+    "checksum": "8e7cc3b156062f3f3aaebab36957c97c"
+  },
+  "training": {
+    "emotion": "sad",
+    "transcript": "OAF_chair_sad.wav",
+    "confidence": 0,
+    "processingTime": 0
+  },
+  "analysis": {
+    "features": {},
+    "voiceFeatures": {
+      "pitch": 178,
+      "volume": 1,
+      "spectralCentroid": 22,
+      "duration": 2.58859410430839,
+      "sampleRate": 44100
+    },
+    "bertAnalysis": {},
+    "audioMetadata": {}
+  },
+  "bulkInfo": {
+    "isBulk": false
+  }
+}

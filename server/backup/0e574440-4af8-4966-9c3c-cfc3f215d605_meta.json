@@ -1,0 +1,40 @@
+{
+  "id": "0e574440-4af8-4966-9c3c-cfc3f215d605",
+  "sessionId": "8e7e3ca1-7437-46ce-bc5f-572d2962f901",
+  "timestamp": "2025-09-13T04:34:24.145Z",
+  "serverInfo": {
+    "hostname": "hp",
+    "ip": "::1",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+    "retryCount": 0
+  },
+  "file": {
+    "filename": "audio_1757738064144_fc91c517.wav",
+    "originalName": "happy_1757736786502_rswr7uyrn.wav",
+    "size": 100448,
+    "mimetype": "audio/wav",
+    "path": "D:\\nlp_emotion_detection_project\\server\\uploads\\audio_1757738064144_fc91c517.wav",
+    "checksum": "e9d8a58ae1ed221deed880c7e222024c"
+  },
+  "training": {
+    "emotion": "happy",
+    "transcript": "OAF_south_happy.wav",
+    "confidence": 0,
+    "processingTime": 0
+  },
+  "analysis": {
+    "features": {},
+    "voiceFeatures": {
+      "pitch": 218,
+      "volume": 2,
+      "spectralCentroid": 32,
+      "duration": 2.056031746031746,
+      "sampleRate": 44100
+    },
+    "bertAnalysis": {},
+    "audioMetadata": {}
+  },
+  "bulkInfo": {
+    "isBulk": false
+  }
+}

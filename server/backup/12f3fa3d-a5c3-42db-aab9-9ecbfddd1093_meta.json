@@ -1,0 +1,40 @@
+{
+  "id": "12f3fa3d-a5c3-42db-aab9-9ecbfddd1093",
+  "sessionId": "03189d3f-c530-443e-a4f9-768b0135a3e7",
+  "timestamp": "2025-09-13T04:59:39.930Z",
+  "serverInfo": {
+    "hostname": "hp",
+    "ip": "::1",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+    "retryCount": 0
+  },
+  "file": {
+    "filename": "audio_1757739579925_c2f7a26b.wav",
+    "originalName": "happy_1757736786743_j8sa7xge8.wav",
+    "size": 98036,
+    "mimetype": "audio/wav",
+    "path": "D:\\nlp_emotion_detection_project\\server\\uploads\\audio_1757739579925_c2f7a26b.wav",
+    "checksum": "543609d9e1006a2880c14f509df1b1c4"
+  },
+  "training": {
+    "emotion": "happy",
+    "transcript": "OAF_tire_happy.wav",
+    "confidence": 0,
+    "processingTime": 0
+  },
+  "analysis": {
+    "features": {},
+    "voiceFeatures": {
+      "pitch": 227,
+      "volume": 2,
+      "spectralCentroid": 30,
+      "duration": 2.006621315192744,
+      "sampleRate": 44100
+    },
+    "bertAnalysis": {},
+    "audioMetadata": {}
+  },
+  "bulkInfo": {
+    "isBulk": false
+  }
+}

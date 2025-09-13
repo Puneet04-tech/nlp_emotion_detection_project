@@ -1,0 +1,39 @@
+{
+  "id": "8aed7b5c-1805-43c9-80b2-624b762c4f31",
+  "sessionId": "4c892f92-3ac8-4aa6-8e57-4e46c858d676",
+  "timestamp": "2025-09-13T04:59:48.500Z",
+  "serverInfo": {
+    "hostname": "hp",
+    "ip": "::1",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+    "retryCount": 0
+  },
+  "file": {
+    "filename": "audio_1757739588495_3f480195.wav",
+    "originalName": "surprised_1757739287909_2gd7w2bvh.wav",
+    "size": 95648,
+    "mimetype": "audio/wav",
+    "path": "D:\\nlp_emotion_detection_project\\server\\uploads\\audio_1757739588495_3f480195.wav",
+    "checksum": "bc2f1c43831cb3a79dcb6662ed8ec212"
+  },
+  "training": {
+    "emotion": "surprised",
+    "transcript": "[object Object]",
+    "confidence": 0,
+    "processingTime": 0
+  },
+  "analysis": {
+    "features": {},
+    "voiceFeatures": {
+      "pitch": 195,
+      "volume": 0.02,
+      "spectralCentroid": 34,
+      "mfcc": []
+    },
+    "bertAnalysis": {},
+    "audioMetadata": {}
+  },
+  "bulkInfo": {
+    "isBulk": false
+  }
+}

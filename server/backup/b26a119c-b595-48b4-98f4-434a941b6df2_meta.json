@@ -1,0 +1,39 @@
+{
+  "id": "b26a119c-b595-48b4-98f4-434a941b6df2",
+  "sessionId": "30adf7a5-fbf5-472b-a8af-64204c14fdbb",
+  "timestamp": "2025-09-13T04:34:21.645Z",
+  "serverInfo": {
+    "hostname": "hp",
+    "ip": "::1",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+    "retryCount": 0
+  },
+  "file": {
+    "filename": "audio_1757738061629_d4e1c0de.ogg",
+    "originalName": "angry_1757155802092_9ca6sr6jp.ogg",
+    "size": 93473,
+    "mimetype": "audio/ogg",
+    "path": "D:\\nlp_emotion_detection_project\\server\\uploads\\audio_1757738061629_d4e1c0de.ogg",
+    "checksum": "f52191b3590972bc5a3aa21f3d1b7960"
+  },
+  "training": {
+    "emotion": "angry",
+    "transcript": "[object Object]",
+    "confidence": 0,
+    "processingTime": 0
+  },
+  "analysis": {
+    "features": {},
+    "voiceFeatures": {
+      "pitch": 221,
+      "volume": 0.05,
+      "spectralCentroid": 47,
+      "mfcc": []
+    },
+    "bertAnalysis": {},
+    "audioMetadata": {}
+  },
+  "bulkInfo": {
+    "isBulk": false
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "id": "1bf6601a-b986-4800-adfe-4f557a735544",
+  "sessionId": "dc343527-dc1d-4a15-90e2-497d648496e3",
+  "timestamp": "2025-09-13T04:34:25.645Z",
+  "serverInfo": {
+    "hostname": "hp",
+    "ip": "::1",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+    "retryCount": 0
+  },
+  "file": {
+    "filename": "audio_1757738065642_ae0cc335.wav",
+    "originalName": "happy_1757736790369_nkuw7twvf.wav",
+    "size": 105008,
+    "mimetype": "audio/wav",
+    "path": "D:\\nlp_emotion_detection_project\\server\\uploads\\audio_1757738065642_ae0cc335.wav",
+    "checksum": "7ea92c006a7269477bba581c303713fc"
+  },
+  "training": {
+    "emotion": "happy",
+    "transcript": "OAF_wife_happy.wav",
+    "confidence": 0,
+    "processingTime": 0
+  },
+  "analysis": {
+    "features": {},
+    "voiceFeatures": {
+      "pitch": 201,
+      "volume": 3,
+      "spectralCentroid": 27,
+      "duration": 2.1494104308390023,
+      "sampleRate": 44100
+    },
+    "bertAnalysis": {},
+    "audioMetadata": {}
+  },
+  "bulkInfo": {
+    "isBulk": false
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "id": "ba8de4a8-e5cd-4471-8927-c2f466852813",
+  "sessionId": "7fdc7c35-60df-4967-9624-f33ce4a63762",
+  "timestamp": "2025-09-13T04:59:46.826Z",
+  "serverInfo": {
+    "hostname": "hp",
+    "ip": "::1",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+    "retryCount": 0
+  },
+  "file": {
+    "filename": "audio_1757739586821_bd3b2b0c.wav",
+    "originalName": "sad_1757737685304_frzhxpp4n.wav",
+    "size": 145798,
+    "mimetype": "audio/wav",
+    "path": "D:\\nlp_emotion_detection_project\\server\\uploads\\audio_1757739586821_bd3b2b0c.wav",
+    "checksum": "8c0a5cc35786ee3848c77bddf0e19bfe"
+  },
+  "training": {
+    "emotion": "sad",
+    "transcript": "OAF_gap_sad.wav",
+    "confidence": 0,
+    "processingTime": 0
+  },
+  "analysis": {
+    "features": {},
+    "voiceFeatures": {
+      "pitch": 174,
+      "volume": 2,
+      "spectralCentroid": 27,
+      "duration": 2.984784580498866,
+      "sampleRate": 44100
+    },
+    "bertAnalysis": {},
+    "audioMetadata": {}
+  },
+  "bulkInfo": {
+    "isBulk": false
+  }
+}

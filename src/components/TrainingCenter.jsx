@@ -202,19 +202,27 @@ class VoiceTrainingManager {
     return saved ? JSON.parse(saved) : {
       pitch: { 
         happy: 1.2, sad: 1.1, angry: 1.3, excited: 1.4, calm: 1.0, nervous: 0.8, 
-        confident: 1.1, surprised: 1.3, neutral: 1.0, frustrated: 1.1, fear: 1.2, joy: 1.3 
+        confident: 1.1, surprised: 1.3, neutral: 1.0, frustrated: 1.1, 
+        joyful: 1.3, melancholy: 0.9, enthusiastic: 1.5, worried: 0.9, 
+        peaceful: 0.8, determined: 1.1, anxious: 1.0, energetic: 1.4
       },
       volume: { 
         happy: 1.1, sad: 1.2, angry: 1.4, excited: 1.3, calm: 1.0, nervous: 0.7, 
-        confident: 1.2, surprised: 1.2, neutral: 1.0, frustrated: 1.1, fear: 1.1, joy: 1.2 
+        confident: 1.2, surprised: 1.2, neutral: 1.0, frustrated: 1.1,
+        joyful: 1.2, melancholy: 0.8, enthusiastic: 1.4, worried: 0.9,
+        peaceful: 0.8, determined: 1.1, anxious: 0.9, energetic: 1.3
       },
       spectral: { 
         happy: 1.1, sad: 1.0, angry: 1.3, excited: 1.2, calm: 1.0, nervous: 0.8, 
-        confident: 1.1, surprised: 1.2, neutral: 1.0, frustrated: 1.0, fear: 1.1, joy: 1.2 
+        confident: 1.1, surprised: 1.2, neutral: 1.0, frustrated: 1.0,
+        joyful: 1.2, melancholy: 0.9, enthusiastic: 1.3, worried: 0.9,
+        peaceful: 0.8, determined: 1.0, anxious: 1.0, energetic: 1.2
       },
       keyword: { 
         happy: 1.0, sad: 1.0, angry: 1.2, excited: 1.1, calm: 1.0, nervous: 0.9, 
-        confident: 1.1, surprised: 1.0, neutral: 1.0, frustrated: 1.0, fear: 1.1, joy: 1.1 
+        confident: 1.1, surprised: 1.0, neutral: 1.0, frustrated: 1.0,
+        joyful: 1.1, melancholy: 1.0, enthusiastic: 1.2, worried: 0.9,
+        peaceful: 0.9, determined: 1.1, anxious: 0.9, energetic: 1.1
       }
     };
   }
@@ -270,6 +278,9 @@ class VoiceTrainingManager {
     };
     
     // Store in memory for quick access
+    if (!Array.isArray(this.trainingData[emotion])) {
+      this.trainingData[emotion] = [];
+    }
     this.trainingData[emotion].push(sample);
     this.saveTrainingData();
     
@@ -296,7 +307,7 @@ class VoiceTrainingManager {
           const form = new FormData();
           form.append('emotion', emotion);
           form.append('transcript', transcript || '');
-          form.append('features', JSON.stringify(voiceFeatures || {}));
+          form.append('voiceFeatures', JSON.stringify(voiceFeatures || {}));
           if (audioBlob) {
             // Choose extension based on blob type to avoid confusing server
             const mime = audioBlob.type || '';
@@ -1146,8 +1157,8 @@ const TrainingCenter = ({ analyzer = null, currentTranscript = '', isRecording =
   const [localAnalyzer, setLocalAnalyzer] = useState(null);
   const [localTranscript, setLocalTranscript] = useState('');
   const [isLocalRecording, setIsLocalRecording] = useState(false);
-  const [remoteUrl, setRemoteUrl] = useState(localStorage.getItem('remoteVoiceTrainingUrl') || 'http://localhost:4000/upload');
-  const [remoteUploadEnabled, setRemoteUploadEnabled] = useState(Boolean(localStorage.getItem('remoteVoiceTrainingUrl')));
+  const [remoteUrl, setRemoteUrl] = useState(localStorage.getItem('remoteVoiceTrainingUrl') || 'http://localhost:4000/api/upload');
+  const [remoteUploadEnabled, setRemoteUploadEnabled] = useState(true); // Enable by default since we have ultra-reliable server
   const [remoteUploadStatus, setRemoteUploadStatus] = useState('');
   const [netlifyDeployer] = useState(() => new NetlifyModelDeployer());
   const [netlifyUrl, setNetlifyUrl] = useState(localStorage.getItem('netlifyDeploymentUrl') || '');
@@ -1161,6 +1172,14 @@ const TrainingCenter = ({ analyzer = null, currentTranscript = '', isRecording =
   const audioPreviewRef = useRef(null);
   const canvasRef = useRef(null);
 
+  // Bulk Upload State
+  const [bulkUploadFiles, setBulkUploadFiles] = useState([]);
+  const [bulkProcessing, setBulkProcessing] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState(0);
+  const [processedCount, setProcessedCount] = useState(0);
+  const [showBulkUpload, setShowBulkUpload] = useState(false);
+  const bulkInputRef = useRef(null);
+
   const emotions = [
     { id: 'happy', label: 'Happy 😊', color: '#10b981', instruction: 'Say something joyful like "I feel amazing today!"' },
     { id: 'sad', label: 'Sad 😢', color: '#6b7280', instruction: 'Say something like "I feel really down today"' },
@@ -1171,7 +1190,17 @@ const TrainingCenter = ({ analyzer = null, currentTranscript = '', isRecording =
     { id: 'confident', label: 'Confident 💪', color: '#059669', instruction: 'Say something assertive like "I know I can do this!"' },
     { id: 'surprised', label: 'Surprised 😮', color: '#dc2626', instruction: 'Say something like "Wow, I didn\'t expect that!"' },
     { id: 'neutral', label: 'Neutral 😐', color: '#374151', instruction: 'Say something normal like "Hello, how are you?"' },
-    { id: 'frustrated', label: 'Frustrated 😤', color: '#7c2d12', instruction: 'Say something like "This is so difficult!"' }
+    { id: 'frustrated', label: 'Frustrated 😤', color: '#7c2d12', instruction: 'Say something like "This is so difficult!"' },
+    
+    // New enhanced emotions with sub-emotions
+    { id: 'joyful', label: 'Joyful 🌟', color: '#fbbf24', instruction: 'Express pure joy: "I\'m absolutely delighted!"' },
+    { id: 'melancholy', label: 'Melancholy 🌧️', color: '#4b5563', instruction: 'Express deep sadness: "I feel a profound sadness"' },
+    { id: 'enthusiastic', label: 'Enthusiastic 🔥', color: '#f97316', instruction: 'Show high energy: "I\'m pumped up and ready!"' },
+    { id: 'worried', label: 'Worried 😟', color: '#6366f1', instruction: 'Express concern: "I\'m really worried about this"' },
+    { id: 'peaceful', label: 'Peaceful ☮️', color: '#22d3ee', instruction: 'Sound tranquil: "I feel completely at peace"' },
+    { id: 'determined', label: 'Determined 🎯', color: '#16a34a', instruction: 'Show resolve: "I will definitely achieve this"' },
+    { id: 'anxious', label: 'Anxious 😬', color: '#a855f7', instruction: 'Express anxiety: "I feel really anxious about this"' },
+    { id: 'energetic', label: 'Energetic ⚡', color: '#eab308', instruction: 'Show high energy: "I have so much energy today!"' }
   ];
 
   // Initialize local analyzer if not provided
@@ -1181,6 +1210,23 @@ const TrainingCenter = ({ analyzer = null, currentTranscript = '', isRecording =
       setLocalAnalyzer(newAnalyzer);
     }
   }, [analyzer, localAnalyzer]);
+
+  // Fix localStorage URL if it contains old endpoint and initialize server connection
+  useEffect(() => {
+    const currentUrl = localStorage.getItem('remoteVoiceTrainingUrl');
+    if (currentUrl && currentUrl.includes('/upload') && !currentUrl.includes('/api/upload')) {
+      const fixedUrl = currentUrl.replace('/upload', '/api/upload');
+      localStorage.setItem('remoteVoiceTrainingUrl', fixedUrl);
+      setRemoteUrl(fixedUrl);
+      console.log('Fixed localStorage URL from', currentUrl, 'to', fixedUrl);
+    } else if (!currentUrl) {
+      // Set default server URL and enable remote upload for ultra-reliable server
+      const defaultUrl = 'http://localhost:4000/api/upload';
+      localStorage.setItem('remoteVoiceTrainingUrl', defaultUrl);
+      setRemoteUrl(defaultUrl);
+      console.log('🚀 Initialized ultra-reliable server URL:', defaultUrl);
+    }
+  }, []);
 
   // Use provided analyzer or local one
   const activeAnalyzer = analyzer || localAnalyzer;
@@ -1506,6 +1552,29 @@ const TrainingCenter = ({ analyzer = null, currentTranscript = '', isRecording =
     }
   };
 
+  const updateTrainingStats = async () => {
+    if (!activeAnalyzer) return;
+    
+    try {
+      const stats = {};
+      for (const emotion of emotions) {
+        const samples = await activeAnalyzer.getStoredVoiceSamples(emotion.id);
+        const trainingMeta = await activeAnalyzer.trainingManager.voiceStorage.getTrainingStats();
+        
+        stats[emotion.id] = {
+          totalSamples: samples.length,
+          trainingAccuracy: trainingMeta.averageAccuracy || 0,
+          lastTraining: trainingMeta.lastTraining || null,
+          modelVersion: trainingMeta.modelVersion || 1,
+          confidenceScore: trainingMeta.confidenceScore || 0
+        };
+      }
+      setTrainingStats(stats);
+    } catch (error) {
+      console.warn('Failed to load training stats:', error);
+    }
+  };
+
   const startLocalRecording = async () => {
     if (!activeAnalyzer) {
       setTrainingMessage('❌ Voice analyzer not initialized');
@@ -1656,6 +1725,235 @@ const TrainingCenter = ({ analyzer = null, currentTranscript = '', isRecording =
     } finally {
       // reset file input value to allow re-importing same file if needed
       if (event.target) event.target.value = '';
+    }
+  };
+
+  // Bulk Upload Functions
+  const handleBulkUpload = (event) => {
+    const files = Array.from(event.target.files);
+    console.log(`🗂️ Bulk upload selected: ${files.length} files`);
+    
+    // Validate file types
+    const audioFiles = files.filter(file => file.type.startsWith('audio/'));
+    const invalidFiles = files.length - audioFiles.length;
+    
+    if (invalidFiles > 0) {
+      alert(`⚠️ ${invalidFiles} non-audio files were excluded. Processing ${audioFiles.length} audio files.`);
+    }
+    
+    setBulkUploadFiles(audioFiles);
+    setProcessedCount(0);
+    setBulkProgress(0);
+  };
+
+  const processBulkUpload = async () => {
+    if (bulkUploadFiles.length === 0) return;
+    
+    setBulkProcessing(true);
+    setProcessedCount(0);
+    setBulkProgress(0);
+    
+    console.log(`🚀 Starting bulk processing of ${bulkUploadFiles.length} files for ${selectedEmotion} training...`);
+    setTrainingMessage(`🚀 Starting bulk processing of ${bulkUploadFiles.length} files...`);
+    
+    const batchSize = 25; // Process 25 files at a time
+    const results = [];
+    const trainingManager = new VoiceTrainingManager();
+    
+    try {
+      for (let i = 0; i < bulkUploadFiles.length; i += batchSize) {
+        const batch = bulkUploadFiles.slice(i, i + batchSize);
+        console.log(`📦 Processing batch ${Math.floor(i/batchSize) + 1}: ${batch.length} files`);
+        
+        // Process batch in parallel
+        const batchPromises = batch.map(async (file, index) => {
+          try {
+            // Simulate processing and extract features
+            await new Promise(resolve => setTimeout(resolve, 300 + Math.random() * 700));
+            
+            if (!activeAnalyzer) {
+              throw new Error('Analyzer not available');
+            }
+
+            // Initialize analyzer if needed
+            const initialized = await activeAnalyzer.initialize();
+            if (!initialized) {
+              throw new Error('Could not initialize audio context');
+            }
+
+            // Decode audio and extract features
+            const arrayBuffer = await file.arrayBuffer();
+            const audioBuffer = await activeAnalyzer.audioContext.decodeAudioData(arrayBuffer);
+            
+            // Extract features using same logic as single file import
+            let rms = 0;
+            let centroid = 0;
+            let estFreq = 0;
+
+            const channelData = audioBuffer.getChannelData(0);
+            
+            // Use Meyda if available
+            if (window.Meyda && window.Meyda.extract) {
+              const frameSize = Math.min(2048, channelData.length);
+              const start = Math.max(0, Math.floor((channelData.length - frameSize) / 2));
+              const frame = channelData.slice(start, start + frameSize);
+              const features = window.Meyda.extract(['rms', 'spectralCentroid'], frame);
+              if (features) {
+                rms = features.rms || 0;
+                centroid = features.spectralCentroid || 0;
+              }
+            }
+
+            // Estimate pitch
+            try {
+              estFreq = estimatePitchFromAudioBuffer(audioBuffer) || 0;
+            } catch (pf) {
+              estFreq = 0;
+            }
+
+            // Fallback RMS calculation if needed
+            if (!rms) {
+              let rmsAcc = 0;
+              const step = Math.max(1, Math.floor(channelData.length / 1000));
+              for (let i = 0; i < channelData.length; i += step) {
+                const v = channelData[i];
+                rmsAcc += v * v;
+              }
+              rms = Math.sqrt(rmsAcc / Math.max(1, Math.floor(channelData.length / step)));
+            }
+
+            const voiceFeatures = {
+              pitch: estFreq,
+              volume: Math.round(rms * 100),
+              spectralCentroid: Math.round(centroid),
+              duration: audioBuffer.duration,
+              sampleRate: audioBuffer.sampleRate
+            };
+
+            // Save to voice storage
+            const sample = await trainingManager.voiceStorage.saveVoiceSample(
+              selectedEmotion,
+              file,
+              voiceFeatures,
+              file.name
+            );
+
+            // Add to training data
+            trainingManager.addTrainingData(selectedEmotion, {
+              pitch: estFreq,
+              volume: rms,
+              spectralCentroid: centroid,
+              transcript: file.name
+            });
+
+            // Upload to ultra-reliable server
+            try {
+              const uploadUrl = remoteUrl || localStorage.getItem('remoteVoiceTrainingUrl') || 'http://localhost:4000/api/upload';
+              const formData = new FormData();
+              formData.append('audio', file);
+              formData.append('emotion', selectedEmotion);
+              formData.append('transcript', file.name);
+              formData.append('voiceFeatures', JSON.stringify(voiceFeatures));
+              formData.append('confidence', '85');
+              formData.append('bulkUploadIndex', i + index);
+              formData.append('totalBulkFiles', bulkUploadFiles.length);
+
+              const uploadResponse = await fetch(uploadUrl, {
+                method: 'POST',
+                headers: {
+                  'X-Upload-ID': `bulk_${Date.now()}_${i + index}`,
+                  'X-Retry-Count': '0'
+                },
+                body: formData
+              });
+
+              const uploadResult = await uploadResponse.json();
+              
+              if (!uploadResult.success) {
+                console.warn('Server upload failed, but local storage succeeded', uploadResult);
+              } else {
+                console.log('✅ Uploaded to server:', uploadResult.uploadId);
+              }
+            } catch (serverError) {
+              console.warn('Server upload failed, continuing with local storage only:', serverError.message);
+            }
+
+            // Update progress
+            setProcessedCount(prev => {
+              const newCount = prev + 1;
+              setBulkProgress(Math.round((newCount / bulkUploadFiles.length) * 100));
+              return newCount;
+            });
+
+            return {
+              id: sample.id,
+              filename: file.name,
+              emotion: selectedEmotion,
+              features: voiceFeatures,
+              processedAt: new Date().toISOString(),
+              success: true
+            };
+            
+          } catch (error) {
+            console.error(`❌ Error processing ${file.name}:`, error);
+            
+            // Still update progress even on error
+            setProcessedCount(prev => {
+              const newCount = prev + 1;
+              setBulkProgress(Math.round((newCount / bulkUploadFiles.length) * 100));
+              return newCount;
+            });
+
+            return {
+              filename: file.name,
+              error: error.message,
+              processedAt: new Date().toISOString(),
+              success: false
+            };
+          }
+        });
+        
+        const batchResults = await Promise.all(batchPromises);
+        results.push(...batchResults);
+        
+        // Small delay between batches to prevent overwhelming the system
+        if (i + batchSize < bulkUploadFiles.length) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+      
+      const successCount = results.filter(r => r.success).length;
+      const errorCount = results.filter(r => !r.success).length;
+      
+      console.log(`✅ Bulk processing complete! ${successCount} successful, ${errorCount} errors`);
+      
+      // Update training stats
+      await updateTrainingStats();
+      
+      // Show summary
+      const message = `🎉 Bulk Training Complete!\n\n✅ Successfully processed: ${successCount} files\n❌ Errors: ${errorCount} files\n\n🏋️ All files added to "${selectedEmotion}" training data!`;
+      setTrainingMessage(message);
+      alert(message);
+      
+    } catch (error) {
+      console.error('❌ Bulk processing failed:', error);
+      const errorMsg = `❌ Bulk processing failed: ${error.message}`;
+      setTrainingMessage(errorMsg);
+      alert(errorMsg);
+    } finally {
+      setBulkProcessing(false);
+      setBulkUploadFiles([]);
+      setBulkProgress(0);
+      setProcessedCount(0);
+    }
+  };
+
+  const clearBulkUpload = () => {
+    setBulkUploadFiles([]);
+    setProcessedCount(0);
+    setBulkProgress(0);
+    if (bulkInputRef.current) {
+      bulkInputRef.current.value = '';
     }
   };
 
@@ -2076,7 +2374,7 @@ const TrainingCenter = ({ analyzer = null, currentTranscript = '', isRecording =
           const form = new FormData();
           form.append('emotion', selectedEmotion);
           form.append('transcript', activeTranscript || '');
-          form.append('features', JSON.stringify(voiceFeatures || {}));
+          form.append('voiceFeatures', JSON.stringify(voiceFeatures || {}));
           if (finalBlob) {
             const mime = finalBlob.type || '';
             let ext = '.wav';
@@ -2086,7 +2384,7 @@ const TrainingCenter = ({ analyzer = null, currentTranscript = '', isRecording =
             else if (mime.includes('wav')) ext = '.wav';
             form.append('audio', finalBlob, `${sample.id}${ext}`);
           }
-          const uploadUrl = remoteUrl || localStorage.getItem('remoteVoiceTrainingUrl') || 'http://localhost:4000/upload';
+          const uploadUrl = remoteUrl || localStorage.getItem('remoteVoiceTrainingUrl') || 'http://localhost:4000/api/upload';
           console.debug('Uploading single sample to', uploadUrl, { sampleId: sample.id, emotion: selectedEmotion, hasAudio: !!finalBlob });
           const res = await fetch(uploadUrl, { method: 'POST', body: form });
           if (res.ok) {
@@ -2105,17 +2403,26 @@ const TrainingCenter = ({ analyzer = null, currentTranscript = '', isRecording =
       const stats = trainingStats[selectedEmotion];
       const voiceStorageCount = storageStats[selectedEmotion]?.voiceSamples || 0;
       
-      setTrainingMessage(`✅ Successfully trained ${selectedEmotion} emotion! 
+      const uploadInfo = remoteUploadEnabled ? ' + Uploaded to server!' : '';
+      setTrainingMessage(`✅ Successfully trained ${selectedEmotion} emotion!${uploadInfo} 
         Memory: ${stats?.count || 0} samples, Voice Storage: ${voiceStorageCount} recordings, 
         Accuracy: ${stats?.accuracy || 0}%`);
       
       setTimeout(() => setTrainingMessage(''), 4000);
-    } catch (error) {
-      setTrainingMessage('❌ Training failed. Please try again.');
-      console.error('Training error:', error);
-    }
+      } catch (error) {
+        let errorMsg = '❌ Training failed. Please try again.';
+        if (error && error.message) {
+          errorMsg += `\nError: ${error.message}`;
+        } else if (typeof error === 'string') {
+          errorMsg += `\nError: ${error}`;
+        } else if (error) {
+          errorMsg += `\nError: ${JSON.stringify(error)}`;
+        }
+        setTrainingMessage(errorMsg);
+        console.error('Training error:', error);
+      }
 
-    setIsTraining(false);
+      setIsTraining(false);
   };
 
   const saveRemoteSettings = () => {
@@ -2146,7 +2453,8 @@ const TrainingCenter = ({ analyzer = null, currentTranscript = '', isRecording =
 
   // Bulk push all local IndexedDB voice samples to configured remote server
   const pushAllToServer = async () => {
-    const remoteUrl = localStorage.getItem('remoteVoiceTrainingUrl');
+    const remoteUrl = localStorage.getItem('remoteVoiceTrainingUrl') || 'http://localhost:4000/api/upload';
+    console.log('🔍 Bulk upload using URL:', remoteUrl);
     if (!remoteUrl) {
       setTrainingMessage('⚠️ remoteVoiceTrainingUrl not set in localStorage');
       setTimeout(() => setTrainingMessage(''), 3000);
@@ -2167,7 +2475,7 @@ const TrainingCenter = ({ analyzer = null, currentTranscript = '', isRecording =
           const form = new FormData();
           form.append('emotion', s.emotion);
           form.append('transcript', s.transcript || '');
-          form.append('features', JSON.stringify(s.voiceFeatures || {}));
+          form.append('voiceFeatures', JSON.stringify(s.voiceFeatures || {}));
           if (s.audioBlob) {
             const mime = s.audioBlob.type || '';
             let ext = '.wav';
@@ -2204,7 +2512,7 @@ const TrainingCenter = ({ analyzer = null, currentTranscript = '', isRecording =
   };
 
   const retryFailedUploads = async () => {
-    const remoteUrl = localStorage.getItem('remoteVoiceTrainingUrl');
+    const remoteUrl = localStorage.getItem('remoteVoiceTrainingUrl') || 'http://localhost:4000/api/upload';
     if (!remoteUrl) { setTrainingMessage('⚠️ remoteVoiceTrainingUrl not set'); setTimeout(()=>setTrainingMessage(''),2000); return; }
     setTrainingMessage('⏳ Retrying failed uploads...');
     try {
@@ -2221,7 +2529,7 @@ const TrainingCenter = ({ analyzer = null, currentTranscript = '', isRecording =
           const form = new FormData();
           form.append('emotion', s.emotion);
           form.append('transcript', s.transcript || '');
-          form.append('features', JSON.stringify(s.voiceFeatures || {}));
+          form.append('voiceFeatures', JSON.stringify(s.voiceFeatures || {}));
           if (s.audioBlob) form.append('audio', s.audioBlob, `${s.id}.wav`);
           const resp = await fetch(remoteUrl, { method: 'POST', body: form });
           if (resp.ok) { retried++; await voiceManager.voiceStorage.updateUploadStatus(s.id, 'uploaded'); }
@@ -2720,7 +3028,207 @@ const TrainingCenter = ({ analyzer = null, currentTranscript = '', isRecording =
               🎧 Import audio
               <input type="file" accept="audio/*" onChange={handleAudioFileImport} style={{ display: 'inline-block' }} />
             </label>
+
+            {/* Bulk Upload Toggle */}
+            <button
+              onClick={() => setShowBulkUpload(!showBulkUpload)}
+              disabled={bulkProcessing}
+              style={{
+                padding: '8px 16px',
+                fontSize: '0.9rem',
+                fontWeight: '600',
+                color: 'white',
+                background: showBulkUpload ? 'linear-gradient(135deg, #ff6b6b, #ee5a24)' : 'linear-gradient(135deg, #4834d4, #686de0)',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
+              {showBulkUpload ? '📁 Single Import' : '🗂️ Bulk Import'}
+            </button>
           </div>
+
+          {/* Bulk Upload Section */}
+          {showBulkUpload && (
+            <div style={{
+              background: 'linear-gradient(135deg, #f8f9fa, #e9ecef)',
+              border: '2px dashed #6c757d',
+              borderRadius: '12px',
+              padding: '20px',
+              margin: '15px 0',
+              textAlign: 'center'
+            }}>
+              <h4 style={{ 
+                color: '#495057', 
+                marginBottom: '10px',
+                fontSize: '16px',
+                fontWeight: '700'
+              }}>
+                🚀 Bulk Training Import
+              </h4>
+              
+              <p style={{ 
+                color: '#6c757d', 
+                marginBottom: '15px',
+                fontSize: '13px'
+              }}>
+                Import multiple audio files for training the <strong>"{selectedEmotion}"</strong> emotion. System handles any number of files with intelligent batching!
+              </p>
+
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '15px' }}>
+                <button
+                  onClick={() => bulkInputRef.current?.click()}
+                  disabled={bulkProcessing}
+                  style={{
+                    background: 'linear-gradient(135deg, #28a745, #20c997)',
+                    color: 'white',
+                    border: 'none',
+                    padding: '10px 20px',
+                    borderRadius: '20px',
+                    cursor: 'pointer',
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    transition: 'all 0.3s ease'
+                  }}
+                >
+                  📂 Select Files
+                </button>
+
+                {bulkUploadFiles.length > 0 && (
+                  <>
+                    <button
+                      onClick={processBulkUpload}
+                      disabled={bulkProcessing}
+                      style={{
+                        background: bulkProcessing ? 'linear-gradient(135deg, #6c757d, #adb5bd)' : 'linear-gradient(135deg, #007bff, #0056b3)',
+                        color: 'white',
+                        border: 'none',
+                        padding: '10px 20px',
+                        borderRadius: '20px',
+                        cursor: bulkProcessing ? 'not-allowed' : 'pointer',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        transition: 'all 0.3s ease'
+                      }}
+                    >
+                      {bulkProcessing ? '⏳ Processing...' : `🚀 Train ${bulkUploadFiles.length} Files`}
+                    </button>
+
+                    <button
+                      onClick={clearBulkUpload}
+                      disabled={bulkProcessing}
+                      style={{
+                        background: 'linear-gradient(135deg, #dc3545, #c82333)',
+                        color: 'white',
+                        border: 'none',
+                        padding: '10px 20px',
+                        borderRadius: '20px',
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        transition: 'all 0.3s ease'
+                      }}
+                    >
+                      🗑️ Clear
+                    </button>
+                  </>
+                )}
+              </div>
+
+              <input
+                type="file"
+                ref={bulkInputRef}
+                accept="audio/*"
+                multiple
+                onChange={handleBulkUpload}
+                style={{ display: 'none' }}
+              />
+
+              {/* File List */}
+              {bulkUploadFiles.length > 0 && (
+                <div style={{
+                  background: 'white',
+                  borderRadius: '8px',
+                  padding: '12px',
+                  marginTop: '12px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                  maxHeight: '200px',
+                  overflowY: 'auto'
+                }}>
+                  <div style={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center',
+                    marginBottom: '8px',
+                    fontWeight: '600',
+                    fontSize: '14px',
+                    color: '#495057'
+                  }}>
+                    <span>📋 Selected Files ({bulkUploadFiles.length})</span>
+                    <span>Will train as: <strong>{selectedEmotion}</strong></span>
+                  </div>
+                  {bulkUploadFiles.slice(0, 10).map((file, index) => (
+                    <div key={index} style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '4px 8px',
+                      borderBottom: '1px solid #dee2e6',
+                      fontSize: '11px'
+                    }}>
+                      <span style={{ color: '#495057' }}>🎵 {file.name}</span>
+                      <span style={{ color: '#6c757d' }}>{(file.size / 1024 / 1024).toFixed(2)} MB</span>
+                    </div>
+                  ))}
+                  {bulkUploadFiles.length > 10 && (
+                    <div style={{ textAlign: 'center', padding: '8px', color: '#6c757d', fontSize: '11px' }}>
+                      ... and {bulkUploadFiles.length - 10} more files
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Progress Bar */}
+              {bulkProcessing && (
+                <div style={{
+                  background: 'white',
+                  borderRadius: '8px',
+                  padding: '12px',
+                  marginTop: '12px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                }}>
+                  <h5 style={{ color: '#495057', marginBottom: '8px', fontSize: '14px' }}>
+                    ⚡ Training Progress
+                  </h5>
+                  <div style={{
+                    background: '#e9ecef',
+                    borderRadius: '8px',
+                    height: '16px',
+                    overflow: 'hidden',
+                    marginBottom: '8px'
+                  }}>
+                    <div style={{
+                      background: 'linear-gradient(135deg, #28a745, #20c997)',
+                      height: '100%',
+                      width: `${bulkProgress}%`,
+                      transition: 'width 0.3s ease',
+                      borderRadius: '8px'
+                    }}></div>
+                  </div>
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    fontSize: '12px',
+                    color: '#495057'
+                  }}>
+                    <span>📊 {processedCount} / {bulkUploadFiles.length} files</span>
+                    <span>🎯 {bulkProgress}% complete</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
           
           <div style={{
             fontSize: '0.9rem',
@@ -2813,6 +3321,26 @@ const TrainingCenter = ({ analyzer = null, currentTranscript = '', isRecording =
           >
             {isTraining ? '🎯 Training...' : `🎯 Train ${selectedEmotionData?.label.split(' ')[0]} Emotion`}
           </button>
+
+          {/* Individual Upload Status Indicator */}
+          {remoteUploadStatus && (
+            <div style={{
+              display: 'inline-block',
+              padding: '8px 16px',
+              marginRight: '16px',
+              marginBottom: '16px',
+              borderRadius: '12px',
+              fontSize: '0.9rem',
+              fontWeight: '600',
+              background: remoteUploadStatus.includes('✅') ? 'linear-gradient(135deg, #10b981, #059669)' :
+                         remoteUploadStatus.includes('failed') || remoteUploadStatus.includes('error') ? 'linear-gradient(135deg, #ef4444, #dc2626)' :
+                         'linear-gradient(135deg, #f59e0b, #d97706)',
+              color: 'white',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+            }}>
+              📤 Server: {remoteUploadStatus}
+            </div>
+          )}
           <button
             onClick={trainMlModel}
             disabled={isTrainingModel}
@@ -3118,7 +3646,7 @@ Check console for details`;
               type="text"
               value={remoteUrl}
               onChange={e => setRemoteUrl(e.target.value)}
-              placeholder="http://localhost:4000/upload"
+              placeholder="http://localhost:4000/api/upload"
               style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ddd', minWidth: '320px' }}
             />
             <button

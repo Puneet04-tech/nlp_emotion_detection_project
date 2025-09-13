@@ -1,0 +1,40 @@
+{
+  "id": "cd20add5-a79b-4feb-a029-c2a6463d9ecb",
+  "sessionId": "e10a11e9-ff47-4b80-ad49-39ed30275688",
+  "timestamp": "2025-09-13T04:59:41.217Z",
+  "serverInfo": {
+    "hostname": "hp",
+    "ip": "::1",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+    "retryCount": 0
+  },
+  "file": {
+    "filename": "audio_1757739581213_153cb291.wav",
+    "originalName": "happy_1757736790290_xkwdyagt8.wav",
+    "size": 98246,
+    "mimetype": "audio/wav",
+    "path": "D:\\nlp_emotion_detection_project\\server\\uploads\\audio_1757739581213_153cb291.wav",
+    "checksum": "464889ab72f39ab5b79ad5a54bdac34e"
+  },
+  "training": {
+    "emotion": "happy",
+    "transcript": "OAF_wheat_happy.wav",
+    "confidence": 0,
+    "processingTime": 0
+  },
+  "analysis": {
+    "features": {},
+    "voiceFeatures": {
+      "pitch": 224,
+      "volume": 1,
+      "spectralCentroid": 21,
+      "duration": 2.0109297052154194,
+      "sampleRate": 44100
+    },
+    "bertAnalysis": {},
+    "audioMetadata": {}
+  },
+  "bulkInfo": {
+    "isBulk": false
+  }
+}

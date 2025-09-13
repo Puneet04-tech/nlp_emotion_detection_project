@@ -1,0 +1,40 @@
+{
+  "id": "7eabe067-591b-4476-98d0-9c997910fbbf",
+  "sessionId": "1271d098-c6a9-460f-8283-b482194d366b",
+  "timestamp": "2025-09-13T04:59:43.333Z",
+  "serverInfo": {
+    "hostname": "hp",
+    "ip": "::1",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+    "retryCount": 0
+  },
+  "file": {
+    "filename": "audio_1757739583331_6da6e449.wav",
+    "originalName": "neutral_1757737922249_kxktbuuhl.wav",
+    "size": 98506,
+    "mimetype": "audio/wav",
+    "path": "D:\\nlp_emotion_detection_project\\server\\uploads\\audio_1757739583331_6da6e449.wav",
+    "checksum": "1c44523354f41e21ef9a27f5dbbbbef1"
+  },
+  "training": {
+    "emotion": "neutral",
+    "transcript": "OAF_cause_neutral.wav",
+    "confidence": 0,
+    "processingTime": 0
+  },
+  "analysis": {
+    "features": {},
+    "voiceFeatures": {
+      "pitch": 189,
+      "volume": 1,
+      "spectralCentroid": 33,
+      "duration": 2.0162585034013607,
+      "sampleRate": 44100
+    },
+    "bertAnalysis": {},
+    "audioMetadata": {}
+  },
+  "bulkInfo": {
+    "isBulk": false
+  }
+}

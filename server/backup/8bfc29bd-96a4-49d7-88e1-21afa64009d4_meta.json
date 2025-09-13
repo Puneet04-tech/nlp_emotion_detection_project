@@ -1,0 +1,40 @@
+{
+  "id": "8bfc29bd-96a4-49d7-88e1-21afa64009d4",
+  "sessionId": "f3c63ff6-4ff7-4604-86ff-909bfa415209",
+  "timestamp": "2025-09-13T04:59:40.717Z",
+  "serverInfo": {
+    "hostname": "hp",
+    "ip": "::1",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+    "retryCount": 0
+  },
+  "file": {
+    "filename": "audio_1757739580716_5c010192.wav",
+    "originalName": "happy_1757736789531_15poxyniy.wav",
+    "size": 96582,
+    "mimetype": "audio/wav",
+    "path": "D:\\nlp_emotion_detection_project\\server\\uploads\\audio_1757739580716_5c010192.wav",
+    "checksum": "1759099105ce669be133c27898510e87"
+  },
+  "training": {
+    "emotion": "happy",
+    "transcript": "OAF_young_happy.wav",
+    "confidence": 0,
+    "processingTime": 0
+  },
+  "analysis": {
+    "features": {},
+    "voiceFeatures": {
+      "pitch": 206,
+      "volume": 1,
+      "spectralCentroid": 24,
+      "duration": 1.9768480725623583,
+      "sampleRate": 44100
+    },
+    "bertAnalysis": {},
+    "audioMetadata": {}
+  },
+  "bulkInfo": {
+    "isBulk": false
+  }
+}

@@ -35,6 +35,8 @@ import BERTSummaryInsights from './components/BERTSummaryInsights';
 import TrainingCenter from './components/TrainingCenter';
 // Enhanced Voice Emotion Analyzer
 import EnhancedVoiceEmotionAnalyzerComponent from './components/EnhancedVoiceEmotionAnalyzer';
+// Ultra-Enhanced Voice Emotion System with 18+ emotions and advanced visualizations
+import VoiceEmotionSystem from './components/VoiceEmotionSystem-simple';
 
 function App() { 
   // --- BEAUTIFUL UI STATE ---
@@ -3657,8 +3659,19 @@ function App() {
               )}
             </div>
             
-            {/* Original Enhanced Voice Emotion Analyzer Component */}
-            <EnhancedVoiceEmotionAnalyzerComponent />
+            {/* Ultra-Enhanced Voice Emotion System with 18+ emotions, test samples, and advanced visualizations */}
+            <VoiceEmotionSystem 
+              onEmotionDetected={(data) => {
+                console.log('🎭 Ultra-Enhanced Emotion Detected:', data);
+                // You can add additional handling here if needed
+              }}
+              onTrainingData={(trainingData) => {
+                console.log('🎓 Training Data Received:', trainingData);
+                // This will integrate with the Training Center
+                // Store training data for model improvement
+              }}
+              isVisible={true}
+            />
           </div>
         )}
 

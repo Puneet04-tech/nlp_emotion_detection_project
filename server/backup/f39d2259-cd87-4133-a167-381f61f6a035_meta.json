@@ -1,0 +1,40 @@
+{
+  "id": "f39d2259-cd87-4133-a167-381f61f6a035",
+  "sessionId": "5cff4e20-8ab0-47dc-879e-8d487148fe5f",
+  "timestamp": "2025-09-13T04:59:38.710Z",
+  "serverInfo": {
+    "hostname": "hp",
+    "ip": "::1",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+    "retryCount": 0
+  },
+  "file": {
+    "filename": "audio_1757739578708_2ca997a4.wav",
+    "originalName": "happy_1757517385126_otptpegio.wav",
+    "size": 97640,
+    "mimetype": "audio/wav",
+    "path": "D:\\nlp_emotion_detection_project\\server\\uploads\\audio_1757739578708_2ca997a4.wav",
+    "checksum": "f7b4204d4e543273d7688b92321bfe79"
+  },
+  "training": {
+    "emotion": "happy",
+    "transcript": "OAF_cab_happy.wav",
+    "confidence": 0,
+    "processingTime": 0
+  },
+  "analysis": {
+    "features": {},
+    "voiceFeatures": {
+      "pitch": 243,
+      "volume": 2,
+      "spectralCentroid": 26,
+      "duration": 1.9985208333333333,
+      "sampleRate": 48000
+    },
+    "bertAnalysis": {},
+    "audioMetadata": {}
+  },
+  "bulkInfo": {
+    "isBulk": false
+  }
+}

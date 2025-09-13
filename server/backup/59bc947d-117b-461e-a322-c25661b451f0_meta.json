@@ -1,0 +1,39 @@
+{
+  "id": "59bc947d-117b-461e-a322-c25661b451f0",
+  "sessionId": "12f786d6-7db4-4254-8160-ddff952573ef",
+  "timestamp": "2025-09-13T04:59:38.376Z",
+  "serverInfo": {
+    "hostname": "hp",
+    "ip": "::1",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+    "retryCount": 0
+  },
+  "file": {
+    "filename": "audio_1757739578366_39fc95a2.wav",
+    "originalName": "enthusiastic_1757739469017_mohd3xss1.wav",
+    "size": 91566,
+    "mimetype": "audio/wav",
+    "path": "D:\\nlp_emotion_detection_project\\server\\uploads\\audio_1757739578366_39fc95a2.wav",
+    "checksum": "e1843e272fe47aa9ef88c1f7ea35b552"
+  },
+  "training": {
+    "emotion": "enthusiastic",
+    "transcript": "[object Object]",
+    "confidence": 0,
+    "processingTime": 0
+  },
+  "analysis": {
+    "features": {},
+    "voiceFeatures": {
+      "pitch": 330,
+      "volume": 0.01,
+      "spectralCentroid": 36,
+      "mfcc": []
+    },
+    "bertAnalysis": {},
+    "audioMetadata": {}
+  },
+  "bulkInfo": {
+    "isBulk": false
+  }
+}

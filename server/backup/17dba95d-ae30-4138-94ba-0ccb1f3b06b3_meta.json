@@ -1,0 +1,40 @@
+{
+  "id": "17dba95d-ae30-4138-94ba-0ccb1f3b06b3",
+  "sessionId": "8b7ee41b-ecac-4896-97b3-5dee0bf6e43c",
+  "timestamp": "2025-09-13T04:59:46.453Z",
+  "serverInfo": {
+    "hostname": "hp",
+    "ip": "::1",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+    "retryCount": 0
+  },
+  "file": {
+    "filename": "audio_1757739586450_cab7f213.wav",
+    "originalName": "sad_1757737684941_dkki4btvq.wav",
+    "size": 115764,
+    "mimetype": "audio/wav",
+    "path": "D:\\nlp_emotion_detection_project\\server\\uploads\\audio_1757739586450_cab7f213.wav",
+    "checksum": "6735a050b18993632f4685d9e469b8fc"
+  },
+  "training": {
+    "emotion": "sad",
+    "transcript": "OAF_door_sad.wav",
+    "confidence": 0,
+    "processingTime": 0
+  },
+  "analysis": {
+    "features": {},
+    "voiceFeatures": {
+      "pitch": 188,
+      "volume": 2,
+      "spectralCentroid": 19,
+      "duration": 2.369705215419501,
+      "sampleRate": 44100
+    },
+    "bertAnalysis": {},
+    "audioMetadata": {}
+  },
+  "bulkInfo": {
+    "isBulk": false
+  }
+}

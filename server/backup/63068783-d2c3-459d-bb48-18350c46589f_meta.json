@@ -1,0 +1,39 @@
+{
+  "id": "63068783-d2c3-459d-bb48-18350c46589f",
+  "sessionId": "2269d016-5f83-42f1-afb7-ee2a21e8378d",
+  "timestamp": "2025-09-13T04:59:38.447Z",
+  "serverInfo": {
+    "hostname": "hp",
+    "ip": "::1",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+    "retryCount": 0
+  },
+  "file": {
+    "filename": "audio_1757739578443_7e5617f6.webm",
+    "originalName": "happy_1757152740976_g897hrr4p.webm",
+    "size": 66815,
+    "mimetype": "audio/webm",
+    "path": "D:\\nlp_emotion_detection_project\\server\\uploads\\audio_1757739578443_7e5617f6.webm",
+    "checksum": "06126aa5dcab1720f4b7111c578e39e0"
+  },
+  "training": {
+    "emotion": "happy",
+    "transcript": "[object Object]",
+    "confidence": 0,
+    "processingTime": 0
+  },
+  "analysis": {
+    "features": {},
+    "voiceFeatures": {
+      "pitch": 0,
+      "volume": 0,
+      "spectralCentroid": 0,
+      "mfcc": []
+    },
+    "bertAnalysis": {},
+    "audioMetadata": {}
+  },
+  "bulkInfo": {
+    "isBulk": false
+  }
+}

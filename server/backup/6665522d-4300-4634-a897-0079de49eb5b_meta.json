@@ -1,0 +1,40 @@
+{
+  "id": "6665522d-4300-4634-a897-0079de49eb5b",
+  "sessionId": "8735e1b5-4926-4d5b-ae9f-2a492fac1031",
+  "timestamp": "2025-09-13T04:34:28.281Z",
+  "serverInfo": {
+    "hostname": "hp",
+    "ip": "::1",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+    "retryCount": 0
+  },
+  "file": {
+    "filename": "audio_1757738068278_0cf9d26c.wav",
+    "originalName": "sad_1757737683176_bdvw0fcis.wav",
+    "size": 121490,
+    "mimetype": "audio/wav",
+    "path": "D:\\nlp_emotion_detection_project\\server\\uploads\\audio_1757738068278_0cf9d26c.wav",
+    "checksum": "cb91d1628de9027e1215e9f44774803c"
+  },
+  "training": {
+    "emotion": "sad",
+    "transcript": "OAF_dog_sad.wav",
+    "confidence": 0,
+    "processingTime": 0
+  },
+  "analysis": {
+    "features": {},
+    "voiceFeatures": {
+      "pitch": 179,
+      "volume": 1,
+      "spectralCentroid": 21,
+      "duration": 2.4869614512471654,
+      "sampleRate": 44100
+    },
+    "bertAnalysis": {},
+    "audioMetadata": {}
+  },
+  "bulkInfo": {
+    "isBulk": false
+  }
+}

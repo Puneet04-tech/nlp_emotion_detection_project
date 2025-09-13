@@ -1,0 +1,40 @@
+{
+  "id": "c2cf923d-35da-4aab-af23-d86c1decb064",
+  "sessionId": "935aedbc-4702-4e2d-b481-c8f000f10238",
+  "timestamp": "2025-09-13T04:59:44.456Z",
+  "serverInfo": {
+    "hostname": "hp",
+    "ip": "::1",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+    "retryCount": 0
+  },
+  "file": {
+    "filename": "audio_1757739584453_00415760.wav",
+    "originalName": "sad_1757737516680_4ddyifog9.wav",
+    "size": 123528,
+    "mimetype": "audio/wav",
+    "path": "D:\\nlp_emotion_detection_project\\server\\uploads\\audio_1757739584453_00415760.wav",
+    "checksum": "c17e0254799bbb9abfcd592c02a968f8"
+  },
+  "training": {
+    "emotion": "sad",
+    "transcript": "OAF_bought_sad.wav",
+    "confidence": 0,
+    "processingTime": 0
+  },
+  "analysis": {
+    "features": {},
+    "voiceFeatures": {
+      "pitch": 182,
+      "volume": 1,
+      "spectralCentroid": 23,
+      "duration": 2.5287074829931973,
+      "sampleRate": 44100
+    },
+    "bertAnalysis": {},
+    "audioMetadata": {}
+  },
+  "bulkInfo": {
+    "isBulk": false
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "id": "8cc313e6-6659-47d5-b5a6-8d013b58c44e",
+  "sessionId": "6cd4f7d4-8dff-4f1b-b6ac-179224dd39eb",
+  "timestamp": "2025-09-13T04:34:28.978Z",
+  "serverInfo": {
+    "hostname": "hp",
+    "ip": "::1",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+    "retryCount": 0
+  },
+  "file": {
+    "filename": "audio_1757738068976_add1d862.wav",
+    "originalName": "sad_1757737685020_ig3cms49a.wav",
+    "size": 121004,
+    "mimetype": "audio/wav",
+    "path": "D:\\nlp_emotion_detection_project\\server\\uploads\\audio_1757738068976_add1d862.wav",
+    "checksum": "3b97cb0219e9c73813b9f3fb793eaa9c"
+  },
+  "training": {
+    "emotion": "sad",
+    "transcript": "OAF_fall_sad.wav",
+    "confidence": 0,
+    "processingTime": 0
+  },
+  "analysis": {
+    "features": {},
+    "voiceFeatures": {
+      "pitch": 173,
+      "volume": 2,
+      "spectralCentroid": 25,
+      "duration": 2.4770068027210885,
+      "sampleRate": 44100
+    },
+    "bertAnalysis": {},
+    "audioMetadata": {}
+  },
+  "bulkInfo": {
+    "isBulk": false
+  }
+}

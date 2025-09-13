@@ -1,0 +1,40 @@
+{
+  "id": "2db90397-0532-4158-82d8-d3dac3a9b7d8",
+  "sessionId": "8df5560c-4630-4eb8-bc22-d4a32f22ae39",
+  "timestamp": "2025-09-13T04:34:25.427Z",
+  "serverInfo": {
+    "hostname": "hp",
+    "ip": "::1",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+    "retryCount": 0
+  },
+  "file": {
+    "filename": "audio_1757738065424_6b4bc08b.wav",
+    "originalName": "happy_1757736790030_luaderq1s.wav",
+    "size": 98582,
+    "mimetype": "audio/wav",
+    "path": "D:\\nlp_emotion_detection_project\\server\\uploads\\audio_1757738065424_6b4bc08b.wav",
+    "checksum": "8e7cca0bac3f116349bfcd4f466ae199"
+  },
+  "training": {
+    "emotion": "happy",
+    "transcript": "OAF_walk_happy.wav",
+    "confidence": 0,
+    "processingTime": 0
+  },
+  "analysis": {
+    "features": {},
+    "voiceFeatures": {
+      "pitch": 213,
+      "volume": 4,
+      "spectralCentroid": 26,
+      "duration": 2.0178004535147394,
+      "sampleRate": 44100
+    },
+    "bertAnalysis": {},
+    "audioMetadata": {}
+  },
+  "bulkInfo": {
+    "isBulk": false
+  }
+}

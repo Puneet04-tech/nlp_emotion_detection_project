@@ -1,0 +1,40 @@
+{
+  "id": "d3f98e4f-d462-4225-88cd-996d18fa8329",
+  "sessionId": "8c7e96d5-c7ba-46ca-8b04-4aac956e0aec",
+  "timestamp": "2025-09-13T04:34:25.048Z",
+  "serverInfo": {
+    "hostname": "hp",
+    "ip": "::1",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+    "retryCount": 0
+  },
+  "file": {
+    "filename": "audio_1757738065042_1a33ccb6.wav",
+    "originalName": "happy_1757736789288_lj8ero4fk.wav",
+    "size": 96730,
+    "mimetype": "audio/wav",
+    "path": "D:\\nlp_emotion_detection_project\\server\\uploads\\audio_1757738065042_1a33ccb6.wav",
+    "checksum": "2cab5effd66fb796910bfb7d57402e25"
+  },
+  "training": {
+    "emotion": "happy",
+    "transcript": "OAF_witch_happy.wav",
+    "confidence": 0,
+    "processingTime": 0
+  },
+  "analysis": {
+    "features": {},
+    "voiceFeatures": {
+      "pitch": 202,
+      "volume": 2,
+      "spectralCentroid": 27,
+      "duration": 1.9798866213151927,
+      "sampleRate": 44100
+    },
+    "bertAnalysis": {},
+    "audioMetadata": {}
+  },
+  "bulkInfo": {
+    "isBulk": false
+  }
+}

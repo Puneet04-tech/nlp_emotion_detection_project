@@ -1,0 +1,40 @@
+{
+  "id": "492dc47e-3c4d-47e7-95a0-a043d1abd66d",
+  "sessionId": "1680a67f-ed23-4399-a6ed-b3d1337c9a91",
+  "timestamp": "2025-09-13T04:34:23.874Z",
+  "serverInfo": {
+    "hostname": "hp",
+    "ip": "::1",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+    "retryCount": 0
+  },
+  "file": {
+    "filename": "audio_1757738063871_cbce9560.wav",
+    "originalName": "happy_1757517938510_jzxiojb4k.wav",
+    "size": 109800,
+    "mimetype": "audio/wav",
+    "path": "D:\\nlp_emotion_detection_project\\server\\uploads\\audio_1757738063871_cbce9560.wav",
+    "checksum": "562c954a4836fd2cb81851f94e6e29fd"
+  },
+  "training": {
+    "emotion": "happy",
+    "transcript": "OAF_lease_happy.wav",
+    "confidence": 0,
+    "processingTime": 0
+  },
+  "analysis": {
+    "features": {},
+    "voiceFeatures": {
+      "pitch": 221,
+      "volume": 2,
+      "spectralCentroid": 27,
+      "duration": 2.2475625,
+      "sampleRate": 48000
+    },
+    "bertAnalysis": {},
+    "audioMetadata": {}
+  },
+  "bulkInfo": {
+    "isBulk": false
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "id": "71268e83-92e8-4f57-a223-edc14468f164",
+  "sessionId": "f1521bac-8e01-41dc-a704-cf85f228816e",
+  "timestamp": "2025-09-13T04:59:38.409Z",
+  "serverInfo": {
+    "hostname": "hp",
+    "ip": "::1",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+    "retryCount": 0
+  },
+  "file": {
+    "filename": "audio_1757739578407_e53d72c8.ogg",
+    "originalName": "happy_1756633575222_ferhc2ez8.ogg",
+    "size": 83597,
+    "mimetype": "audio/ogg",
+    "path": "D:\\nlp_emotion_detection_project\\server\\uploads\\audio_1757739578407_e53d72c8.ogg",
+    "checksum": "44e8da8854f43bc88436afaf1f0e4556"
+  },
+  "training": {
+    "emotion": "happy",
+    "transcript": "[object Object]",
+    "confidence": 0,
+    "processingTime": 0
+  },
+  "analysis": {
+    "features": {},
+    "voiceFeatures": {
+      "pitch": 200,
+      "volume": 0.02,
+      "spectralCentroid": 33,
+      "mfcc": []
+    },
+    "bertAnalysis": {},
+    "audioMetadata": {}
+  },
+  "bulkInfo": {
+    "isBulk": false
+  }
+}

@@ -1,7 +1,7 @@
 // Enhanced Audio Processor V3 - Comprehensive Error-Free System
 import LocalOnlyVoskManager from './localOnlyVoskManager.js';
 import { MockVoskManager } from './mockVoskManager.js';
-import SimpleTestManager from './simpleTestManager.js';
+import { SimpleTestManager } from './simpleTestManager.js';
 import '../utils/comprehensiveVoskBlocker.js'; // Activate comprehensive blocking
 
 class EnhancedAudioProcessorV3 {

@@ -1,72 +1,137 @@
-// Vosk Replacement - Non-downloading version
-// This provides a working interface without any external downloads
+// Mock Vosk Manager
+// Provides mock functionality for Vosk speech recognition
 
-export class MockVoskManager {
+class MockVoskManager {
   constructor() {
-    this.isReady = true;
-    this.loadedModel = { mock: true };
+    this.isInitialized = false;
+    this.isRecording = false;
+    this.model = null;
+    this.recognizer = null;
+    console.log('🎙️ MockVoskManager initialized');
   }
 
-  async initialize(onProgress = null) {
-    if (onProgress) onProgress('🔍 Using mock Vosk (no downloads)...');
-    await new Promise(resolve => setTimeout(resolve, 100)); // Simulate loading
-    if (onProgress) onProgress('✅ Mock Vosk ready');
-    return true;
+  async initialize(modelPath = 'vosk-model-small-en-us-0.15') {
+    try {
+      console.log('🔄 Initializing mock Vosk model...');
+      
+      // Simulate initialization delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      this.model = {
+        name: modelPath,
+        language: 'en-US',
+        size: '39MB',
+        loaded: true
+      };
+      
+      this.isInitialized = true;
+      console.log('✅ Mock Vosk model initialized:', this.model);
+      
+      return {
+        success: true,
+        model: this.model
+      };
+    } catch (error) {
+      console.error('❌ Mock Vosk initialization error:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
   }
 
-  async createRecognizer(sampleRate = 16000) {
-    // Generate emotionally diverse mock transcripts
-    const mockTranscripts = [
-      // Joy/Happiness
-      "I'm absolutely thrilled and excited about this amazing breakthrough in emotion detection!",
-      "This is fantastic news and I'm so happy with these wonderful results!",
-      "I love this incredible system, it's working brilliantly and making me feel joyful!",
-      
-      // Anger/Frustration
-      "I'm really angry and frustrated with this terrible situation, it's completely awful!",
-      "This is stupid and I hate how badly this is performing, it's driving me crazy!",
-      "I'm furious about this horrible mess, this is absolutely ridiculous!",
-      
-      // Sadness/Disappointment
-      "I feel so sad and disappointed about this painful situation, it really hurts.",
-      "This is making me cry because it's so depressing and heartbreaking.",
-      "I'm feeling lonely and empty, this whole thing just makes me feel broken.",
-      
-      // Fear/Anxiety
-      "I'm scared and terrified about what might happen, this is really frightening me.",
-      "This situation is making me panic and feel anxious, I'm worried something bad will occur.",
-      "I'm nervous and afraid about this uncertain outcome, it's causing me anxiety.",
-      
-      // Surprise
-      "Wow, that's absolutely shocking and unexpected! I can't believe this amazing surprise!",
-      "This is so sudden and surprising, what an incredible and unbelievable result!",
-      "Oh my goodness, that's completely shocking! I never expected this!",
-      
-      // Neutral/Standard
-      "This is a standard analysis of the audio processing system functionality.",
-      "The voice emotion detection is operating within normal parameters."
+  async startRecognition(callback) {
+    if (!this.isInitialized) {
+      throw new Error('Vosk not initialized');
+    }
+
+    this.isRecording = true;
+    console.log('🎙️ Mock Vosk recording started');
+
+    // Mock speech recognition with periodic results
+    const mockResults = [
+      'hello',
+      'hello world',
+      'hello world this',
+      'hello world this is',
+      'hello world this is a test',
+      'hello world this is a test of speech recognition'
     ];
-    
-    const randomTranscript = mockTranscripts[Math.floor(Math.random() * mockTranscripts.length)];
-    
-    return {
-      AcceptWaveform: () => true,
-      acceptWaveform: () => true,
-      FinalResult: () => JSON.stringify({ text: randomTranscript }),
-      finalResult: () => ({ text: randomTranscript }),
-      PartialResult: () => JSON.stringify({ partial: "Processing..." }),
-      partialResult: () => ({ partial: "Processing..." })
-    };
+
+    let index = 0;
+    const interval = setInterval(() => {
+      if (!this.isRecording || index >= mockResults.length) {
+        clearInterval(interval);
+        return;
+      }
+
+      const result = {
+        partial: index < mockResults.length - 1,
+        text: mockResults[index],
+        confidence: 0.85 + Math.random() * 0.15
+      };
+
+      if (callback) {
+        callback(result);
+      }
+
+      index++;
+    }, 800);
+
+    return interval;
   }
 
-  getModelInfo() {
+  stopRecognition() {
+    this.isRecording = false;
+    console.log('⏹️ Mock Vosk recording stopped');
+  }
+
+  async transcribeAudio(audioBlob) {
+    try {
+      console.log('🔄 Mock transcribing audio blob...');
+      
+      // Simulate transcription delay
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Mock transcription results
+      const mockTranscriptions = [
+        'This is a sample transcription of your audio',
+        'Hello, this is a test of the speech recognition system',
+        'The weather is nice today and I feel great',
+        'I am testing the emotion detection system with voice input',
+        'This is an example of speech to text conversion'
+      ];
+      
+      const transcription = mockTranscriptions[Math.floor(Math.random() * mockTranscriptions.length)];
+      
+      return {
+        success: true,
+        text: transcription,
+        confidence: 0.82 + Math.random() * 0.15,
+        duration: Math.random() * 10 + 2,
+        language: 'en-US'
+      };
+    } catch (error) {
+      console.error('❌ Mock transcription error:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  getStatus() {
     return {
-      loaded: true,
-      path: 'mock',
-      type: 'Mock (No Downloads)'
+      initialized: this.isInitialized,
+      recording: this.isRecording,
+      model: this.model,
+      type: 'mock'
     };
   }
 }
 
-// Create a mock that prevents any real vosk operations
+// Create and export instance
 export const mockVoskManager = new MockVoskManager();
+
+export default MockVoskManager;
+export { MockVoskManager };

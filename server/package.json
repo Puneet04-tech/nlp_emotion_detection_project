@@ -1,0 +1,34 @@
+{
+  "name": "ultra-reliable-voice-server",
+  "version": "1.0.0",
+  "description": "Ultra-reliable backend server for voice emotion training with guaranteed upload success",
+  "type": "module",
+  "main": "ultra-reliable-server.js",
+  "scripts": {
+    "start": "node ultra-reliable-server.js",
+    "dev": "node --watch ultra-reliable-server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "multer": "^1.4.5-lts.1",
+    "cors": "^2.8.5",
+    "ws": "^8.14.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "keywords": [
+    "voice",
+    "emotion",
+    "training",
+    "upload",
+    "reliable",
+    "bulk"
+  ],
+  "author": "Voice Emotion System",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

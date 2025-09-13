@@ -1,0 +1,40 @@
+{
+  "id": "277fd75f-2888-44c1-9fe2-1f6a4a406a0a",
+  "sessionId": "1ef7defe-00ec-4f81-9a8c-cdd389cb6b53",
+  "timestamp": "2025-09-13T04:59:44.820Z",
+  "serverInfo": {
+    "hostname": "hp",
+    "ip": "::1",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+    "retryCount": 0
+  },
+  "file": {
+    "filename": "audio_1757739584817_00a75402.wav",
+    "originalName": "sad_1757737517208_r7m4x113j.wav",
+    "size": 121174,
+    "mimetype": "audio/wav",
+    "path": "D:\\nlp_emotion_detection_project\\server\\uploads\\audio_1757739584817_00a75402.wav",
+    "checksum": "57e7e5d922876e1bbaf5c510ad423fb8"
+  },
+  "training": {
+    "emotion": "sad",
+    "transcript": "OAF_chalk_sad.wav",
+    "confidence": 0,
+    "processingTime": 0
+  },
+  "analysis": {
+    "features": {},
+    "voiceFeatures": {
+      "pitch": 188,
+      "volume": 2,
+      "spectralCentroid": 24,
+      "duration": 2.4804988662131517,
+      "sampleRate": 44100
+    },
+    "bertAnalysis": {},
+    "audioMetadata": {}
+  },
+  "bulkInfo": {
+    "isBulk": false
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "id": "0bc1189f-0ff1-41ae-aacc-d962a3d2aba1",
+  "sessionId": "89c56485-7cd7-4356-97c2-65d0ab862fdf",
+  "timestamp": "2025-09-13T04:34:24.177Z",
+  "serverInfo": {
+    "hostname": "hp",
+    "ip": "::1",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+    "retryCount": 0
+  },
+  "file": {
+    "filename": "audio_1757738064175_3a44681b.wav",
+    "originalName": "happy_1757736786570_z1zbyxc2v.wav",
+    "size": 101622,
+    "mimetype": "audio/wav",
+    "path": "D:\\nlp_emotion_detection_project\\server\\uploads\\audio_1757738064175_3a44681b.wav",
+    "checksum": "4c2fab3026028e3b2330f92bae87c57e"
+  },
+  "training": {
+    "emotion": "happy",
+    "transcript": "OAF_team_happy.wav",
+    "confidence": 0,
+    "processingTime": 0
+  },
+  "analysis": {
+    "features": {},
+    "voiceFeatures": {
+      "pitch": 214,
+      "volume": 2,
+      "spectralCentroid": 25,
+      "duration": 2.0800680272108845,
+      "sampleRate": 44100
+    },
+    "bertAnalysis": {},
+    "audioMetadata": {}
+  },
+  "bulkInfo": {
+    "isBulk": false
+  }
+}
