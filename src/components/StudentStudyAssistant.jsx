@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { FaMicrophone, FaStop, FaDownload, FaClipboard } from 'react-icons/fa';
 import './StudentStudyAssistant.css';
+import { cloudSttManager } from '../utils/cloudSttManager.js';
 
 // Student Study Assistant: record teacher voice, transcribe, then generate study materials
 export default function StudentStudyAssistant() {
@@ -11,6 +12,12 @@ export default function StudentStudyAssistant() {
   const [metrics, setMetrics] = useState({ durationSec: 0, words: 0, wpm: 0, avgEnergy: 0 });
   const [manualMode, setManualMode] = useState(false); // allow typing/pasting text
   const [selectedLang, setSelectedLang] = useState('en-US');
+  const [useCloudSTT, setUseCloudSTT] = useState(false);
+  const [cloudProvider, setCloudProvider] = useState('none');
+  const [cloudApiKey, setCloudApiKey] = useState('');
+  const mediaRecorderRef = useRef(null);
+  const recordedChunksRef = useRef([]);
+  const [remoteSummarizerUrl, setRemoteSummarizerUrl] = useState('');
   const languages = [
     { code: 'en-US', label: 'English (US)' },
     { code: 'en-GB', label: 'English (UK)' },
@@ -75,6 +82,59 @@ export default function StudentStudyAssistant() {
       analyzeEnergyLoop();
     } catch (e) {
       console.error('Audio init failed', e);
+    }
+  };
+
+  // Start recording to cloud (MediaRecorder) when cloud STT is selected
+  const startCloudRecording = async () => {
+    try {
+      recordedChunksRef.current = [];
+      // Ensure we have a stream via startAudioAnalysis
+      await startAudioAnalysis();
+      const stream = mediaStreamRef.current;
+      if (!stream) throw new Error('Unable to access microphone for cloud recording');
+
+      // Choose a mimeType that is broadly supported
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/ogg';
+      const mr = new MediaRecorder(stream, { mimeType });
+      mediaRecorderRef.current = mr;
+
+      mr.ondataavailable = (ev) => {
+        if (ev.data && ev.data.size > 0) recordedChunksRef.current.push(ev.data);
+      };
+
+      mr.onstop = async () => {
+        try {
+          const blob = new Blob(recordedChunksRef.current, { type: mimeType });
+          setError('');
+          // Initialize cloud manager with provided config
+          await cloudSttManager.initialize({ provider: cloudProvider, apiKey: cloudApiKey });
+          const res = await cloudSttManager.transcribeAudio(blob);
+          if (res && res.success && res.text) {
+            finalTranscriptRef.current = res.text;
+            setTranscript(res.text);
+          } else {
+            const msg = (res && res.error) ? res.error : 'Cloud transcription failed';
+            setError(msg);
+          }
+        } catch (err) {
+          console.error('Cloud transcription error', err);
+          setError(err && err.message ? err.message : String(err));
+        } finally {
+          // finalize metrics once we have transcript
+          finalizeMetrics();
+          // stop audio analysis explicitly
+          stopAudioAnalysis();
+        }
+      };
+
+      mr.start();
+      setIsListening(true);
+      startTimeRef.current = Date.now();
+    } catch (e) {
+      console.error('startCloudRecording failed', e);
+      setError('Cloud recording failed: ' + (e && e.message ? e.message : String(e)));
+      stopAudioAnalysis();
     }
   };
 
@@ -147,29 +207,41 @@ export default function StudentStudyAssistant() {
     setMaterials(null);
     setMetrics({ durationSec: 0, words: 0, wpm: 0, avgEnergy: 0 });
     setManualMode(false); // recording takes precedence over manual mode
-    const recog = initRecognition(selectedLang);
-    if (!recog) {
-      setError('Speech recognition not supported in this browser.');
-      return;
-    }
-    recognitionRef.current = recog;
     try {
       shouldContinueRef.current = true;
       restartCountRef.current = 0;
-      await startAudioAnalysis();
-      recog.start();
+      if (useCloudSTT) {
+        // Use MediaRecorder + cloud transcription
+        await startCloudRecording();
+      } else {
+        const recog = initRecognition(selectedLang);
+        if (!recog) {
+          setError('Speech recognition not supported in this browser. You can enable Cloud STT.');
+          return;
+        }
+        recognitionRef.current = recog;
+        await startAudioAnalysis();
+        recog.start();
+      }
     } catch (e) {
       console.error(e);
-      setError('Failed to start recording');
+      setError('Failed to start recording: ' + (e && e.message ? e.message : String(e)));
     }
   };
 
   const stopRecording = () => {
     shouldContinueRef.current = false;
+    // If we're using MediaRecorder/cloud, stop the recorder and let its onstop handler handle transcription
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      try { mediaRecorderRef.current.stop(); } catch (e) { console.warn(e); }
+      mediaRecorderRef.current = null;
+    }
+
     if (recognitionRef.current) {
       try { recognitionRef.current.stop(); } catch {}
     }
-    stopAudioAnalysis();
+    // If not using cloud media recorder, stop analysis now. If using cloud recorder, analysis will be stopped after onstop.
+    if (!useCloudSTT) stopAudioAnalysis();
   };
 
   const clearAll = () => {
@@ -210,9 +282,41 @@ export default function StudentStudyAssistant() {
       const words = transcript.split(/\s+/).filter(Boolean).length;
       setMetrics({ durationSec: 0, words, wpm: 0, avgEnergy: 0 });
     }
-    const tone = inferToneProfile();
-    const pack = buildStudyPack(transcript, tone);
-    setMaterials(pack);
+    (async () => {
+      try {
+        const tone = inferToneProfile();
+        // If remote summarizer URL is configured, try remote first
+        if (remoteSummarizerUrl && remoteSummarizerUrl.trim()) {
+          try {
+            const resp = await fetch(remoteSummarizerUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ text: transcript })
+            });
+            if (resp.ok) {
+              const json = await resp.json();
+              // Expecting { summary, detailed } or full materials
+              const packFromServer = json.materials || {
+                learning_objectives: json.learning_objectives || [],
+                brief_summary: json.summary || json.brief_summary || summarizeText(transcript, 5),
+                detailed_summary: json.detailed || json.detailed_summary || summarizeText(transcript, 12),
+                bullet_notes: json.bullet_notes || makeBullets(transcript.split(/[.!?]+\s+/), 12)
+              };
+              setMaterials(packFromServer);
+              return;
+            }
+          } catch (err) {
+            console.warn('Remote summarizer failed, falling back to local generation', err);
+          }
+        }
+
+  const pack = buildStudyPack(transcript, tone);
+        setMaterials(pack);
+      } catch (err) {
+        console.error('Failed to generate materials', err);
+        setError('Failed to generate materials: ' + (err && err.message ? err.message : String(err)));
+      }
+    })();
   };
 
   const copyToClipboard = async (text) => {

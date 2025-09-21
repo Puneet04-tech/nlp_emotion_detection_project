@@ -37,6 +37,8 @@ import TrainingCenter from './components/TrainingCenter';
 import EnhancedVoiceEmotionAnalyzerComponent from './components/EnhancedVoiceEmotionAnalyzer';
 // Ultra-Enhanced Voice Emotion System with 18+ emotions and advanced visualizations
 import VoiceEmotionSystem from './components/VoiceEmotionSystem-simple';
+// Test runner for voice emotion system
+import TestVoiceEmotionRunner from './TestVoiceEmotionRunner';
 
 function App() { 
   // --- BEAUTIFUL UI STATE ---
@@ -44,6 +46,8 @@ function App() {
   const [analysisHistory, setAnalysisHistory] = useState([]);
   const [viewedAnalysis, setViewedAnalysis] = useState(null);
   const [historyLoaded, setHistoryLoaded] = useState(false);
+  // External training samples coming from VoiceEmotionSystem
+  const [externalTrainingSamples, setExternalTrainingSamples] = useState([]);
   
   // --- ENHANCED EMOTION DETECTION STATE ---
   const [emotionEngine] = useState(() => new EnhancedEmotionEngine());
@@ -72,471 +76,16 @@ function App() {
       try {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed)) {
-          const mapped = parsed.map(item => {
-            // Defensive: fill in all fields, even if item is malformed
-            // --- BEAUTIFUL UI COMPONENTS ---
-            const BeautifulHeader = () => (
-              <header style={{
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                color: 'white',
-                padding: '48px 0 32px 0',
-                textAlign: 'center',
-                borderRadius: '0 0 48px 48px',
-                boxShadow: '0 8px 32px rgba(102,126,234,0.15)',
-                marginBottom: 40
-              }}>
-                <h1 style={{ fontSize: '3.5rem', fontWeight: 900, margin: 0, textShadow: '2px 2px 8px rgba(0,0,0,0.08)' }}>
-                  🎤 AI Voice & Emotion Analyzer
-                </h1>
-                <p style={{ fontSize: '1.3rem', fontWeight: 400, opacity: 0.95, marginTop: 18 }}>
-                  Advanced neural emotion detection, transcript analysis, and ML training center
-                </p>
-              </header>
-            );
-
-            const BeautifulTabs = () => (
-              <nav style={{
-                display: 'flex',
-                justifyContent: 'center',
-                gap: 18,
-                marginBottom: 32,
-                background: 'white',
-                borderRadius: 20,
-                boxShadow: '0 4px 24px rgba(0,0,0,0.07)',
-                padding: '12px 0'
-              }}>
-                {[
-                  { id: 'upload', label: '📁 Upload', color: '#667eea' },
-                  { id: 'analysis', label: '📊 Analysis', color: '#10b981' },
-                  { id: 'enhanced', label: '🧠 Enhanced AI', color: '#8b5cf6' },
-                  { id: 'history', label: '🕒 History', color: '#f59e0b' },
-                  { id: 'training', label: '🤖 Training', color: '#764ba2' },
-                  { id: 'diagnostics', label: '🔧 VOSK DIAGNOSTICS HERE!', color: '#ff0000' }
-                ].map(tab => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    style={{
-                      flex: 1,
-                      padding: '18px 32px',
-                      fontSize: '1.2rem',
-                      fontWeight: 700,
-                      border: 'none',
-                      borderRadius: 16,
-                      cursor: 'pointer',
-                      background: activeTab === tab.id
-                        ? `linear-gradient(135deg, ${tab.color}, ${tab.color}dd)`
-                        : 'transparent',
-                      color: activeTab === tab.id ? 'white' : '#64748b',
-                      boxShadow: activeTab === tab.id ? `0 8px 24px ${tab.color}40` : 'none',
-                      transition: 'all 0.3s ease',
-                      transform: activeTab === tab.id ? 'translateY(-2px)' : 'translateY(0)'
-                    }}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </nav>
-            );
-
-            // --- BEAUTIFUL MAIN CONTAINER ---
-            const BeautifulContainer = ({ children }) => (
-              <div style={{
-                maxWidth: 1200,
-                margin: '0 auto',
-                padding: '0 24px 48px 24px',
-                fontFamily: 'Inter, system-ui, sans-serif',
-                background: 'linear-gradient(120deg, #f8fafc 60%, #e0e7ff 100%)',
-                minHeight: '100vh',
-                borderRadius: 32,
-                boxShadow: '0 8px 48px rgba(102,126,234,0.08)'
-              }}>
-                {children}
-              </div>
-            );
-
-            // --- BEAUTIFUL APP RENDER ---
-            return (
-              <BeautifulContainer>
-                <BeautifulHeader />
-                <BeautifulTabs />
-                {/* --- BEAUTIFUL TAB CONTENT --- */}
-                <div style={{ marginTop: 24 }}>
-                  {activeTab === 'upload' && (
-                    <section style={{
-                      background: 'white',
-                      borderRadius: 24,
-                      boxShadow: '0 4px 24px rgba(102,126,234,0.07)',
-                      padding: '40px',
-                      marginBottom: 32
-                    }}>
-                      {/* ...existing upload UI... */}
-                      <h2 style={{ fontSize: '2rem', fontWeight: 800, color: '#667eea', marginBottom: 18 }}>Upload Audio/Text</h2>
-                      {/* Place your upload form/input here */}
-                    </section>
-                  )}
-                  {activeTab === 'analysis' && (
-                    <section style={{
-                      background: 'white',
-                      borderRadius: 24,
-                      boxShadow: '0 4px 24px rgba(16,185,129,0.07)',
-                      padding: '40px',
-                      marginBottom: 32
-                    }}>
-                      {/* ...existing analysis UI... */}
-                      <h2 style={{ fontSize: '2rem', fontWeight: 800, color: '#10b981', marginBottom: 18 }}>Analysis Results</h2>
-                      {/* Place your analysis results here */}
-                    </section>
-                  )}
-                  {activeTab === 'enhanced' && (
-                    <section style={{
-                      background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
-                      borderRadius: 24,
-                      boxShadow: '0 4px 24px rgba(139,92,246,0.15)',
-                      padding: '40px',
-                      marginBottom: 32,
-                      color: 'white'
-                    }}>
-                      <h2 style={{ 
-                        fontSize: '2.5rem', 
-                        fontWeight: 800, 
-                        color: 'white', 
-                        marginBottom: 18,
-                        textShadow: '2px 2px 4px rgba(0,0,0,0.3)'
-                      }}>
-                        🧠 Enhanced AI Emotion Analysis
-                      </h2>
-                      <p style={{ 
-                        fontSize: '1.3rem', 
-                        opacity: 0.9, 
-                        marginBottom: 30,
-                        lineHeight: 1.6
-                      }}>
-                        Advanced multi-modal emotion detection combining BERT NLP, voice analysis, and neural pattern recognition
-                      </p>
-
-                      {enhancedResults ? (
-                        <div style={{
-                          background: 'rgba(255,255,255,0.15)',
-                          borderRadius: '20px',
-                          padding: '30px',
-                          backdropFilter: 'blur(10px)',
-                          marginBottom: '25px'
-                        }}>
-                          <h3 style={{ 
-                            fontSize: '1.8rem', 
-                            marginBottom: '20px',
-                            color: '#ffd700',
-                            textShadow: '1px 1px 2px rgba(0,0,0,0.3)'
-                          }}>
-                            🎯 Multi-Modal Fusion Results
-                          </h3>
-                          
-                          {enhancedResults.fusedAnalysis && (
-                            <div style={{ marginBottom: '25px' }}>
-                              <h4 style={{ 
-                                fontSize: '1.3rem', 
-                                marginBottom: '15px',
-                                color: '#a7f3d0'
-                              }}>
-                                Neural Network Fusion Analysis
-                              </h4>
-                              <div style={{ 
-                                display: 'grid', 
-                                gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', 
-                                gap: '15px',
-                                marginBottom: '15px'
-                              }}>
-                                {Object.entries(enhancedResults.fusedAnalysis.emotions || {}).map(([emotion, score]) => (
-                                  <div key={emotion} style={{
-                                    background: 'linear-gradient(135deg, rgba(255,255,255,0.25), rgba(255,255,255,0.15))',
-                                    padding: '15px',
-                                    borderRadius: '12px',
-                                    textAlign: 'center',
-                                    border: '1px solid rgba(255,255,255,0.2)',
-                                    transform: score > 0.5 ? 'scale(1.05)' : 'scale(1)',
-                                    transition: 'transform 0.3s ease'
-                                  }}>
-                                    <div style={{ 
-                                      fontWeight: 'bold', 
-                                      textTransform: 'capitalize',
-                                      fontSize: '1.1rem',
-                                      marginBottom: '8px'
-                                    }}>
-                                      {emotion}
-                                    </div>
-                                    <div style={{ 
-                                      fontSize: '1.5rem', 
-                                      color: score > 0.5 ? '#ffd700' : '#fde68a',
-                                      fontWeight: 'bold'
-                                    }}>
-                                      {(score * 100).toFixed(1)}%
-                                    </div>
-                                    <div style={{
-                                      width: '100%',
-                                      height: '6px',
-                                      background: 'rgba(255,255,255,0.3)',
-                                      borderRadius: '3px',
-                                      marginTop: '8px',
-                                      overflow: 'hidden'
-                                    }}>
-                                      <div style={{
-                                        width: `${score * 100}%`,
-                                        height: '100%',
-                                        background: 'linear-gradient(90deg, #ffd700, #ffed4e)',
-                                        borderRadius: '3px',
-                                        transition: 'width 1s ease'
-                                      }}></div>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                              
-                              <div style={{
-                                background: 'rgba(255,255,255,0.1)',
-                                padding: '15px',
-                                borderRadius: '10px',
-                                marginTop: '15px'
-                              }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                  <span style={{ fontSize: '1.1rem' }}>Overall Confidence:</span>
-                                  <span style={{ 
-                                    fontSize: '1.3rem', 
-                                    fontWeight: 'bold',
-                                    color: '#ffd700'
-                                  }}>
-                                    {((enhancedResults.fusedAnalysis.confidence || 0) * 100).toFixed(1)}%
-                                  </span>
-                                </div>
-                                <div style={{
-                                  width: '100%',
-                                  height: '8px',
-                                  background: 'rgba(255,255,255,0.3)',
-                                  borderRadius: '4px',
-                                  marginTop: '8px',
-                                  overflow: 'hidden'
-                                }}>
-                                  <div style={{
-                                    width: `${(enhancedResults.fusedAnalysis.confidence || 0) * 100}%`,
-                                    height: '100%',
-                                    background: 'linear-gradient(90deg, #10b981, #34d399)',
-                                    borderRadius: '4px',
-                                    transition: 'width 1.5s ease'
-                                  }}></div>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-
-                          <div style={{ 
-                            display: 'grid', 
-                            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
-                            gap: '20px',
-                            marginTop: '25px'
-                          }}>
-                            {enhancedResults.bertAnalysis && (
-                              <div style={{
-                                background: 'rgba(16,185,129,0.2)',
-                                padding: '20px',
-                                borderRadius: '15px',
-                                border: '1px solid rgba(16,185,129,0.3)'
-                              }}>
-                                <h4 style={{ 
-                                  fontSize: '1.2rem', 
-                                  marginBottom: '10px',
-                                  color: '#6ee7b7'
-                                }}>
-                                  📝 Enhanced BERT Analysis
-                                </h4>
-                                <div style={{ fontSize: '1rem', lineHeight: 1.5 }}>
-                                  <div>Primary: <strong>{enhancedResults.bertAnalysis.primaryEmotion}</strong></div>
-                                  <div>Confidence: <strong>{((enhancedResults.bertAnalysis.confidence || 0) * 100).toFixed(1)}%</strong></div>
-                                  <div style={{ fontSize: '0.9rem', opacity: 0.8, marginTop: '8px' }}>
-                                    Strategy: Ensemble analysis with context windows
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-
-                            {enhancedResults.voiceAnalysis && (
-                              <div style={{
-                                background: 'rgba(239,68,68,0.2)',
-                                padding: '20px',
-                                borderRadius: '15px',
-                                border: '1px solid rgba(239,68,68,0.3)'
-                              }}>
-                                <h4 style={{ 
-                                  fontSize: '1.2rem', 
-                                  marginBottom: '10px',
-                                  color: '#fca5a5'
-                                }}>
-                                  🔊 Voice Emotion Analysis
-                                </h4>
-                                <div style={{ fontSize: '1rem', lineHeight: 1.5 }}>
-                                  <div>Detected: <strong>{enhancedResults.voiceAnalysis.dominantEmotion}</strong></div>
-                                  <div style={{ fontSize: '0.9rem', opacity: 0.8, marginTop: '8px' }}>
-                                    Features: Pitch, Energy, Spectral Analysis
-                                  </div>
-                                  <div style={{ fontSize: '0.9rem', opacity: 0.8 }}>
-                                    Real-time acoustic processing
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-
-                          <div style={{ 
-                            marginTop: '25px',
-                            padding: '20px',
-                            background: 'rgba(255,255,255,0.1)',
-                            borderRadius: '15px',
-                            borderLeft: '4px solid #ffd700'
-                          }}>
-                            <h4 style={{ 
-                              fontSize: '1.2rem', 
-                              marginBottom: '10px',
-                              color: '#ffd700'
-                            }}>
-                              🔬 Technical Details
-                            </h4>
-                            <div style={{ 
-                              fontSize: '0.95rem', 
-                              lineHeight: 1.5,
-                              opacity: 0.9,
-                              display: 'grid',
-                              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                              gap: '10px'
-                            }}>
-                              <div>
-                                <strong>Fusion Weights:</strong><br />
-                                BERT: 35%, Voice: 30%<br />
-                                Patterns: 20%, Temporal: 15%
-                              </div>
-                              <div>
-                                <strong>Analysis Type:</strong><br />
-                                Multi-modal Neural Fusion<br />
-                                Real-time Processing
-                              </div>
-                              <div>
-                                <strong>Source:</strong><br />
-                                {enhancedResults.source}<br />
-                                {new Date(enhancedResults.timestamp).toLocaleTimeString()}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div style={{
-                          background: 'rgba(255,255,255,0.15)',
-                          borderRadius: '20px',
-                          padding: '40px',
-                          textAlign: 'center',
-                          backdropFilter: 'blur(10px)'
-                        }}>
-                          <div style={{ fontSize: '4rem', marginBottom: '20px' }}>🎤</div>
-                          <h3 style={{ 
-                            fontSize: '1.8rem', 
-                            marginBottom: '15px',
-                            color: '#ffd700'
-                          }}>
-                            Ready for Enhanced Analysis
-                          </h3>
-                          <p style={{ 
-                            fontSize: '1.1rem',
-                            opacity: 0.9, 
-                            marginBottom: '25px',
-                            lineHeight: 1.6
-                          }}>
-                            Upload an audio file or enter text to experience our advanced<br />
-                            multi-modal emotion detection system in action
-                          </p>
-                          <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                            <button
-                              onClick={handleFileUpload}
-                              style={{
-                                background: 'linear-gradient(45deg, #ff6b6b, #ff8e8e)',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '15px',
-                                padding: '15px 30px',
-                                fontSize: '1.1rem',
-                                fontWeight: 'bold',
-                                cursor: 'pointer',
-                                boxShadow: '0 6px 20px rgba(255,107,107,0.4)',
-                                transition: 'all 0.3s ease'
-                              }}
-                              onMouseOver={(e) => {
-                                e.target.style.transform = 'translateY(-2px)';
-                                e.target.style.boxShadow = '0 8px 25px rgba(255,107,107,0.5)';
-                              }}
-                              onMouseOut={(e) => {
-                                e.target.style.transform = 'translateY(0)';
-                                e.target.style.boxShadow = '0 6px 20px rgba(255,107,107,0.4)';
-                              }}
-                            >
-                              📁 Upload Audio/Text
-                            </button>
-                            <button
-                              onClick={() => setActiveTab('upload')}
-                              style={{
-                                background: 'linear-gradient(45deg, #4ade80, #22d3ee)',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '15px',
-                                padding: '15px 30px',
-                                fontSize: '1.1rem',
-                                fontWeight: 'bold',
-                                cursor: 'pointer',
-                                boxShadow: '0 6px 20px rgba(74,222,128,0.4)',
-                                transition: 'all 0.3s ease'
-                              }}
-                              onMouseOver={(e) => {
-                                e.target.style.transform = 'translateY(-2px)';
-                                e.target.style.boxShadow = '0 8px 25px rgba(74,222,128,0.5)';
-                              }}
-                              onMouseOut={(e) => {
-                                e.target.style.transform = 'translateY(0)';
-                                e.target.style.boxShadow = '0 6px 20px rgba(74,222,128,0.4)';
-                              }}
-                            >
-                              🎙️ Try Upload Tab
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </section>
-                  )}
-                  {activeTab === 'history' && (
-                    <section style={{
-                      background: 'white',
-                      borderRadius: 24,
-                      boxShadow: '0 4px 24px rgba(245,158,11,0.07)',
-                      padding: '40px',
-                      marginBottom: 32
-                    }}>
-                      {/* ...existing history UI... */}
-                      <h2 style={{ fontSize: '2rem', fontWeight: 800, color: '#f59e0b', marginBottom: 18 }}>Analysis History</h2>
-                      {/* Place your history list here */}
-                    </section>
-                  )}
-                  {activeTab === 'training' && (
-                    <section style={{
-                      background: 'white',
-                      borderRadius: 24,
-                      boxShadow: '0 4px 24px rgba(118,75,162,0.07)',
-                      padding: '40px',
-                      marginBottom: 32
-                    }}>
-                      {/* ...existing training UI... */}
-                      <h2 style={{ fontSize: '2rem', fontWeight: 800, color: '#764ba2', marginBottom: 18 }}>ML Training Center</h2>
-                      {/* Place your training center UI here */}
-                    </section>
-                  )}
-                </div>
-              </BeautifulContainer>
-            );
-          });
-          setAnalysisHistory(mapped);
+          const normalized = parsed.map(item => ({
+            id: item.id || Date.now() + Math.random(),
+            type: item.type || 'Unknown',
+            date: item.date || new Date().toISOString(),
+            transcript: typeof item.transcript === 'string' ? item.transcript : '',
+            summary: typeof item.summary === 'string' ? item.summary : '',
+            analysis: item.analysis !== undefined ? item.analysis : null,
+            chartData: item.chartData !== undefined ? item.chartData : null
+          }));
+          setAnalysisHistory(normalized);
         }
       } catch (e) {
         console.warn('Failed to parse analysis history from localStorage:', e);
@@ -545,9 +94,7 @@ function App() {
     }
     setHistoryLoaded(true);
   }, []);
-  // ...existing code...
-  // Fix for analysis history parsing block
-  // (This block should be inside useEffect, not after return)
+  // end of initial history load useEffect
 
   // Save history to localStorage when it changes (all fields, add debug log)
   useEffect(() => {
@@ -585,8 +132,11 @@ function App() {
     const initializeEmotionDetection = async () => {
       try {
         console.log('🎭 Initializing emotion detection engine...');
-        emotionDetectorRef.current = new EmotionDetectionEngine();
-        const success = await emotionDetectorRef.current.initialize();
+        // Use the already-created emotionEngine instance to avoid import/definition issues
+        emotionDetectorRef.current = emotionEngine || new EnhancedEmotionEngine();
+        const success = emotionDetectorRef.current && typeof emotionDetectorRef.current.initialize === 'function'
+          ? await emotionDetectorRef.current.initialize()
+          : false;
         if (success) {
           console.log('🎭 Emotion detection initialized successfully');
         } else {
@@ -601,11 +151,26 @@ function App() {
 
     initializeEmotionDetection();
 
-    // Cleanup on unmount
+    // Cleanup on unmount - safely call any available cleanup method
     return () => {
       if (emotionDetectorRef.current) {
         try {
-          emotionDetectorRef.current.dispose();
+          const detector = emotionDetectorRef.current;
+          if (detector.dispose && typeof detector.dispose === 'function') {
+            detector.dispose();
+          } else if (detector.cleanup && typeof detector.cleanup === 'function') {
+            detector.cleanup();
+          } else if (detector.stopAnalysis && typeof detector.stopAnalysis === 'function') {
+            detector.stopAnalysis();
+          } else if (detector.close && typeof detector.close === 'function') {
+            detector.close();
+          } else if (detector.disconnect && typeof detector.disconnect === 'function') {
+            detector.disconnect();
+          } else {
+            // No known cleanup method - attempt to stop any intervals/tasks
+            try { detector.isAnalyzing = false; } catch(e) {}
+            try { detector.mediaStream && detector.mediaStream.getTracks && detector.mediaStream.getTracks().forEach(t => t.stop()); } catch(e) {}
+          }
         } catch (error) {
           console.error('Error disposing emotion detector:', error);
         }
@@ -1043,9 +608,23 @@ function App() {
       clearTimeout(timeoutId);
 
       let fileTranscript = '';
-      // Handle the new V3 response format
+      // Handle the new V3 response format and normalize to a plain string
       if (extractedText && typeof extractedText === 'object') {
-        fileTranscript = extractedText.transcript || extractedText.audioTranscript || extractedText.content || '';
+        // Prefer simple string fields first
+        if (typeof extractedText.transcript === 'string' && extractedText.transcript.trim()) {
+          fileTranscript = extractedText.transcript;
+        } else if (typeof extractedText.audioTranscript === 'string' && extractedText.audioTranscript.trim()) {
+          fileTranscript = extractedText.audioTranscript;
+        } else if (typeof extractedText.content === 'string' && extractedText.content.trim()) {
+          fileTranscript = extractedText.content;
+        } else if (extractedText.transcript && typeof extractedText.transcript === 'object' && typeof extractedText.transcript.text === 'string') {
+          fileTranscript = extractedText.transcript.text;
+        } else if (extractedText.audioTranscript && typeof extractedText.audioTranscript === 'object' && typeof extractedText.audioTranscript.text === 'string') {
+          fileTranscript = extractedText.audioTranscript.text;
+        } else {
+          // Fallback: if there's a summary or small text field, use it; otherwise empty string
+          fileTranscript = typeof extractedText.summary === 'string' ? extractedText.summary : '';
+        }
       } else {
         fileTranscript = typeof extractedText === 'string' ? extractedText : '';
       }
@@ -1301,8 +880,28 @@ function App() {
       console.warn('⚠️ Emotion detector not initialized');
       return false;
     }
-    
-    const success = emotionDetectorRef.current.startDetection();
+    // Try multiple possible start methods for different engine implementations
+    const detector = emotionDetectorRef.current;
+    let success = false;
+    try {
+      if (detector.startDetection && typeof detector.startDetection === 'function') {
+        success = detector.startDetection();
+      } else if (detector.startAnalysis && typeof detector.startAnalysis === 'function') {
+        success = detector.startAnalysis();
+      } else if (detector.start && typeof detector.start === 'function') {
+        success = detector.start();
+      } else if (detector.isAnalyzing !== undefined) {
+        // best-effort: enable flag and consider it a success
+        try { detector.isAnalyzing = true; } catch(e) {}
+        success = true;
+      } else {
+        console.warn('⚠️ No supported start method found on emotion detector');
+        success = false;
+      }
+    } catch (e) {
+      console.warn('Error starting emotion detector:', e);
+      success = false;
+    }
     if (success) {
       setIsEmotionDetectionActive(true);
       console.log('🎭 Started emotion detection');
@@ -1330,15 +929,37 @@ function App() {
 
   const stopEmotionDetection = useCallback(() => {
     if (emotionDetectorRef.current) {
-      emotionDetectorRef.current.stopDetection();
-      
-      // Clear analysis interval
-      if (emotionDetectorRef.current.analysisIntervalId) {
-        clearInterval(emotionDetectorRef.current.analysisIntervalId);
-        emotionDetectorRef.current.analysisIntervalId = null;
+      try {
+        const detector = emotionDetectorRef.current;
+        if (detector.stopDetection && typeof detector.stopDetection === 'function') {
+          detector.stopDetection();
+        } else if (detector.stopAnalysis && typeof detector.stopAnalysis === 'function') {
+          detector.stopAnalysis();
+        } else if (detector.stop && typeof detector.stop === 'function') {
+          detector.stop();
+        } else if (detector.isAnalyzing !== undefined) {
+          try { detector.isAnalyzing = false; } catch(e) {}
+        } else if (detector.cleanup && typeof detector.cleanup === 'function') {
+          detector.cleanup();
+        } else if (detector.dispose && typeof detector.dispose === 'function') {
+          detector.dispose();
+        } else {
+          // best-effort: stop media stream tracks
+          try { detector.mediaStream && detector.mediaStream.getTracks && detector.mediaStream.getTracks().forEach(t => t.stop()); } catch(e) {}
+        }
+
+        // Clear analysis interval if present
+        try {
+          if (detector.analysisIntervalId) {
+            clearInterval(detector.analysisIntervalId);
+            detector.analysisIntervalId = null;
+          }
+        } catch (e) {}
+      } catch (error) {
+        console.error('Error stopping emotion detector:', error);
       }
     }
-    
+
     setIsEmotionDetectionActive(false);
     console.log('⏹️ Stopped emotion detection');
   }, []);
@@ -2036,7 +1657,7 @@ function App() {
 
       <div className="container" style={{maxWidth: 1100, margin: '0 auto', padding: '32px 18px 48px 18px', background: 'rgba(30,34,53,0.98)', borderRadius: 18, boxShadow: '0 6px 32px #0007'}}>
         <div className="header" style={{marginBottom: 32, textAlign: 'center', position: 'relative'}}>
-          <h1 className="title" style={{fontSize: '2.3em', fontWeight: 800, letterSpacing: '1.5px', color: '#7ed957', textShadow: '0 2px 12px #0008'}}>🧠 NLP Speech Processing & Emotion Analysis Platform</h1>
+          <h1 className="title" style={{fontSize: '2.3em', fontWeight: 800, letterSpacing: '1.5px', color: '#7ed957', textShadow: '0 2px 12px #0008'}}>🧠 VoiceStudy — Speech Transcription & Emotion Intelligence</h1>
           <div className="subtitle" style={{fontSize: '1.15em', color: '#a97fff', marginTop: 6, fontWeight: 500}}>Powered by <span style={{color:'#4f8cff'}}>BERT AI Models</span> • <span style={{color:'#7ed957'}}>Real-time Emotion Detection</span> • <span style={{color:'#f093fb'}}>Smart Summarization</span></div>
           
           {/* Inline Guide Button in Header */}
@@ -2514,6 +2135,15 @@ function App() {
             onClick={() => setActiveTab('students')}
           >
             🎓 Students
+          </button>
+
+          {/* Emotion Detection AI Platform tab */}
+          <button
+            className={`tab`}
+            style={{background: '#23273a', color: '#a97fff', border:'none',borderRadius:8,padding:'12px 20px',fontWeight:700,fontSize:'0.95em',boxShadow:'0 1px 8px #0002',cursor:'pointer',transition:'all 0.2s',minWidth:'140px',textAlign:'center'}}
+            onClick={() => window.open('https://emotionalqiplatform.netlify.app/', '_blank', 'noopener')}
+          >
+            🌐 Emotion Detection AI Platform
           </button>
           
           {/* Row 2: Export & BERT Features */}
@@ -3427,7 +3057,10 @@ function App() {
         {/* BERT Summary & Insights */}
         {activeTab === 'bertsummary' && (
           <div className="tab-content">
-            <BERTSummaryInsights transcript={transcript || (viewedAnalysis ? viewedAnalysis.transcript : '')} />
+            <BERTSummaryInsights 
+              key={transcript || viewedAnalysis?.transcript || 'empty'}
+              transcript={transcript || (viewedAnalysis ? viewedAnalysis.transcript : '')} 
+            />
           </div>
         )}
 
@@ -3441,7 +3074,7 @@ function App() {
         {/* Training Center */}
         {activeTab === 'training' && (
           <div className="tab-content">
-            <TrainingCenter />
+            <TrainingCenter externalTrainingSamples={externalTrainingSamples} />
           </div>
         )}
 
@@ -3667,8 +3300,13 @@ function App() {
               }}
               onTrainingData={(trainingData) => {
                 console.log('🎓 Training Data Received:', trainingData);
-                // This will integrate with the Training Center
-                // Store training data for model improvement
+                // Append to external training samples state so TrainingCenter can consume
+                setExternalTrainingSamples(prev => {
+                  // Avoid duplicates by id if present
+                  if (!trainingData || !trainingData.id) return prev;
+                  if (prev.find(p => p.id === trainingData.id)) return prev;
+                  return [...prev, trainingData];
+                });
               }}
               isVisible={true}
             />

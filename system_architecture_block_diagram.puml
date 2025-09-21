@@ -1,0 +1,43 @@
+@startuml
+skinparam rectangle {
+  BackgroundColor #F9F9F9
+  BorderColor #333
+}
+
+rectangle "User Interface" as UI {
+  [Training Center]
+  [Voice Emotion System]
+  [Visualization]
+}
+
+rectangle "Input Layer" as Input {
+  [Audio Input]
+  [Text Input]
+}
+
+rectangle "Backend Server" as Backend {
+  [Upload Handler]
+  [Data Manager]
+  [Training Jobs]
+}
+
+rectangle "Processing & Analysis" as Processing {
+  [Audio Feature Extractor]
+  [Audio Emotion Classifier]
+  [Text Preprocessing]
+  [Text Sentiment/Emotion Analyzer]
+}
+
+rectangle "Sentiment Fusion Engine" as Fusion
+
+rectangle "Visualization & Feedback" as Viz
+
+rectangle "Data Storage/Export" as Storage
+
+UI -down-> Input
+Input -down-> Backend
+Backend -down-> Processing
+Processing -down-> Fusion
+Fusion -down-> Viz
+Viz -down-> Storage
+@enduml

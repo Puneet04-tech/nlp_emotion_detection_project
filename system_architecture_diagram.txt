@@ -1,0 +1,23 @@
+[User Interface]
+   |         |         |
+[Training] [Voice Emotion] [Visualization]
+   |         |         |
+   v         v         v
+[Audio Input] [Text Input] [Analytics Dashboard]
+   |         |         |
+   v         v         v
+[Backend Server] <----> [Data Storage]
+   |         |
+   v         v
+[Audio Feature Extractor]   [Text Preprocessing]
+   |         |              |
+   v         v              v
+[Audio Emotion Classifier]  [Text Sentiment/Emotion Analyzer]
+   |         |              |
+   +---------+--------------+
+             |
+             v
+   [Sentiment Fusion Engine]
+             |
+             v
+   [Visualization & Feedback]

@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Emotion Detection - Troubleshooting Ready</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1>🎤 Voice Emotion Detection System</h1>
+            <p class="subtitle">Advanced speech recognition with comprehensive troubleshooting</p>
+        </header>
+
+        <!-- System Status Panel -->
+        <section class="system-status-section">
+            <div class="card status-card">
+                <div class="card__header">
+                    <h3>System Status</h3>
+                    <div id="overallStatus" class="status status--info">Checking...</div>
+                </div>
+                <div class="card__body">
+                    <div class="status-grid">
+                        <div class="status-item">
+                            <div class="status-label">Browser Compatibility</div>
+                            <div id="browserStatus" class="status-indicator status--info">🔄 Checking...</div>
+                            <div id="browserDetails" class="status-details"></div>
+                        </div>
+                        <div class="status-item">
+                            <div class="status-label">Security Context (HTTPS)</div>
+                            <div id="securityStatus" class="status-indicator status--info">🔄 Checking...</div>
+                            <div id="securityDetails" class="status-details"></div>
+                        </div>
+                        <div class="status-item">
+                            <div class="status-label">Microphone Permissions</div>
+                            <div id="permissionStatus" class="status-indicator status--info">🔄 Checking...</div>
+                            <div id="permissionDetails" class="status-details"></div>
+                        </div>
+                        <div class="status-item">
+                            <div class="status-label">Speech Recognition Test</div>
+                            <div id="speechTestStatus" class="status-indicator status--info">⏳ Waiting...</div>
+                            <div id="speechTestDetails" class="status-details"></div>
+                        </div>
+                    </div>
+                    <div class="status-actions">
+                        <button type="button" id="runDiagnostics" class="btn btn--primary">Run Full Diagnostics</button>
+                        <button type="button" id="testMicrophone" class="btn btn--secondary">Test Microphone</button>
+                        <button type="button" id="toggleTroubleshooting" class="btn btn--outline">Show Troubleshooting Guide</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Error Display Panel -->
+        <section id="errorPanel" class="error-panel hidden">
+            <div class="card error-card">
+                <div class="card__header">
+                    <h3>⚠️ Issues Detected</h3>
+                </div>
+                <div class="card__body">
+                    <div id="errorsList" class="errors-list"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Troubleshooting Panel -->
+        <section id="troubleshootingPanel" class="troubleshooting-panel hidden">
+            <div class="card">
+                <div class="card__header">
+                    <h3>🔧 Troubleshooting Guide</h3>
+                    <button type="button" id="closeTroubleshooting" class="btn btn--sm btn--outline">Close</button>
+                </div>
+                <div class="card__body">
+                    <div class="troubleshooting-content">
+                        <div class="troubleshooting-section">
+                            <h4>Browser Support</h4>
+                            <div class="browser-grid">
+                                <div class="browser-item">
+                                    <strong>✅ Chrome/Chromium</strong>
+                                    <p>Best support with webkitSpeechRecognition</p>
+                                </div>
+                                <div class="browser-item">
+                                    <strong>⚠️ Safari</strong>
+                                    <p>iOS 14.5+ only, limited functionality</p>
+                                </div>
+                                <div class="browser-item">
+                                    <strong>❌ Firefox</strong>
+                                    <p>Disabled by default, no practical support</p>
+                                </div>
+                                <div class="browser-item">
+                                    <strong>❌ Edge</strong>
+                                    <p>Claims support but doesn't work properly</p>
+                                </div>
+                            </div>
+                        </div>
+                                            <div class="troubleshooting-section">
+                            <h4>Step-by-Step Solutions</h4>
+                            <div id="troubleshootingSteps" class="troubleshooting-steps">
+                                <!-- Steps will be populated dynamically -->
+                            </div>
+                        </div>
+
+                        <div class="troubleshooting-section">
+                            <h4>Common Error Solutions</h4>
+                            <div id="errorSolutions" class="error-solutions">
+                                <!-- Solutions will be populated dynamically -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Main Recording Interface -->
+        <section id="recordingInterface" class="recording-interface hidden">
+            <div class="recording-section">
+                <div class="microphone-container">
+                    <button type="button" id="micButton" class="mic-button" aria-label="Start/Stop Recording">
+                        <svg class="mic-icon" viewBox="0 0 24 24" fill="none">
+                            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                            <path d="M12 19v4"/>
+                            <path d="M8 23h8"/>
+                        </svg>
+                    </button>
+                    <div class="recording-status" id="recordingStatus">System Ready - Click to Start</div>
+                </div>
+
+                <!-- Live Transcription -->
+                <div class="transcription-container">
+                    <h3>Live Transcription</h3>
+                    <div id="transcription" class="transcription-text">Your speech will appear here...</div>
+                </div>
+            </div>
+
+            <!-- Current Emotion Display -->
+            <div class="current-emotion">
+                <div class="emotion-display">
+                    <div class="emotion-indicator">
+                        <div id="currentEmotion" class="emotion-text">Neutral</div>
+                        <div id="confidenceLevel" class="confidence-text">0% Confidence</div>
+                    </div>
+                    <div class="emotion-meter">
+                        <div class="meter-container">
+                            <div id="emotionMeter" class="meter-bar"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analytics Section -->
+            <div class="analytics-section">
+                <div class="analytics-grid">
+                    <!-- Emotion Distribution Chart -->
+                    <div class="card analytics-card">
+                        <div class="card__body">
+                            <h4>Emotion Distribution</h4>
+                            <div class="chart-container" style="position: relative; height: 250px;">
+                                <canvas id="emotionChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Session Statistics -->
+                    <div class="card analytics-card">
+                        <div class="card__body">
+                            <h4>Session Statistics</h4>
+                            <div class="stats-grid">
+                                <div class="stat-item">
+                                    <span class="stat-label">Total Words</span>
+                                    <span id="totalWords" class="stat-value">0</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-label">Average Confidence</span>
+                                    <span id="avgConfidence" class="stat-value">0%</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-label">Dominant Emotion</span>
+                                    <span id="dominantEmotion" class="stat-value">Neutral</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-label">Session Duration</span>
+                                    <span id="sessionDuration" class="stat-value">0s</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Panel -->
+            <div class="settings-section">
+                <div class="card">
+                    <div class="card__body">
+                        <h4>Settings</h4>
+                        <div class="settings-grid">
+                            <div class="form-group">
+                                <label class="form-label" for="languageSelect">Recognition Language</label>
+                                <select id="languageSelect" class="form-control">
+                                    <option value="en-US">English (US)</option>
+                                    <option value="en-GB">English (UK)</option>
+                                    <option value="es-ES">Spanish</option>
+                                    <option value="fr-FR">French</option>
+                                    <option value="de-DE">German</option>
+                                    <option value="it-IT">Italian</option>
+                                    <option value="pt-BR">Portuguese (Brazil)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="sensitivitySlider">Emotion Sensitivity</label>
+                                <input type="range" id="sensitivitySlider" class="form-control" min="0.5" max="2" step="0.1" value="1">
+                                <small class="sensitivity-value">1.0x</small>
+                            </div>
+                            <div class="form-group">
+                                <button type="button" id="clearHistory" class="btn btn--secondary">Clear History</button>
+                                <button type="button" id="exportBtn" class="btn btn--primary">Export Results</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Emotion History Timeline -->
+            <div class="history-section">
+                <div class="card">
+                    <div class="card__body">
+                        <h4>Emotion History Timeline</h4>
+                        <div id="emotionHistory" class="emotion-timeline">
+                            <div class="timeline-empty">No emotions detected yet. Start recording to see your emotion timeline!</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Status Messages -->
+        <div id="statusMessage" class="status-message hidden"></div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

@@ -1,7 +1,7 @@
 
-# Speech Summarizer & Voice Emotion Toolkit
+# VoiceStudy — Speech Transcription & Emotion Intelligence
 
-This repository combines a speech summarization web app with a powerful voice-emotion analysis toolkit and local model integration. It provides realtime speech recognition, transcript summarization, file-based audio analysis, BERT-enhanced semantic emotion detection, and an AI training center to tune voice-based classifiers.
+VoiceStudy combines high-quality speech transcription with advanced voice-emotion intelligence. It provides realtime speech recognition, transcript summarization, file-based audio analysis, BERT-enhanced semantic emotion detection, and tools to collect and train voice samples for improved emotion classifiers.
 
 This README documents run instructions, architecture, features, and troubleshooting for local development.
 

@@ -1,7 +1,7 @@
 {
-  "name": "speech-summarizer",
+  "name": "voice-study",
   "version": "1.0.0",
-  "description": "A speech recognition and summarization application",
+  "description": "VoiceStudy — speech transcription and voice-emotion intelligence",
   "main": "index.js",
   "type": "module",
   "scripts": {

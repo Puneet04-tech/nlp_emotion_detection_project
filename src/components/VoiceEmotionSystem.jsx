@@ -1,19 +1,48 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import './VoiceEmotionSystem.css';
+import UltraEnhancedEmotionEngine from '../utils/ultraEnhancedEmotionEngine';
+import SentimentFusionEngine from '../utils/sentimentFusionEngine';
+import { enhancedBertAnalyzer, analyzeEmotionWithEnhancedBERT } from '../utils/enhancedBertAnalyzer';
+import { analyzeEmotionWithBERT } from '../utils/bertEmotionApi';
+import novelBERTEnhancementSystem from '../utils/novelBERTEnhancementSystem';
+import advancedBERTAnalyzer from '../utils/advancedBERTAnalyzer';
+import bertTranscriptAnalyzer from '../utils/bertTranscriptAnalyzer';
+import bertEmotionEnhancer from '../utils/bertEmotionEnhancer';
+import bertConfig from '../utils/enhancedBertConfig';
+import HubertAnalyzer from '../utils/hubertAnalyzer';
+import DistilHubertAnalyzer from '../utils/distilHubertAnalyzer';
 
 // Ultra-Enhanced Voice Emotion System
 const VoiceEmotionSystem = ({ onEmotionDetected, isVisible = true }) => {
   // Core state
   const [systemStatus, setSystemStatus] = useState('ready');
-  const [emotions] = useState({
-    joy: 0.25,
-    sadness: 0.14, 
-    anger: 0.05,
-    excitement: 0.18,
-    fear: 0.12,
-    surprise: 0.08,
-    neutral: 0.69
+  const [emotions, setEmotions] = useState({
+    joy: 25,
+    sadness: 14,
+    anger: 5,
+    excitement: 18,
+    fear: 12,
+    surprise: 8,
+    neutral: 69
   });
-  const [dominantEmotion] = useState('neutral');
+  const [dominantEmotion, setDominantEmotion] = useState('neutral');
+  const [emotionExplanation, setEmotionExplanation] = useState('');
+  const [voiceFeatures, setVoiceFeatures] = useState({});
+  const [transcript, setTranscript] = useState('');
+  const [fileProcessingStatus, setFileProcessingStatus] = useState('');
+  const [isRecording, setIsRecording] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [confidenceLevel, setConfidenceLevel] = useState('medium');
+  const [analysisQuality, setAnalysisQuality] = useState('standard');
+
+  // Engine refs (initialized once)
+  const ultraEngineRef = useRef(null);
+  const fusionEngineRef = useRef(null);
+  const bertAnalyzerRef = useRef(null);
+  const hubertRef = useRef(null);
+  const distilHubertRef = useRef(null);
+  // Simple in-memory cache to avoid nondeterministic repeated analyses for the same file
+  const analysisCacheRef = useRef(new Map());
   
   // Test samples for demonstration
   const testSamples = {
@@ -42,124 +71,424 @@ const VoiceEmotionSystem = ({ onEmotionDetected, isVisible = true }) => {
   const [showEmotionRadar, setShowEmotionRadar] = useState(false);
   const [showConfidenceChart, setShowConfidenceChart] = useState(false);
   const [currentTestEmotion, setCurrentTestEmotion] = useState(null);
+  const [activeTab, setActiveTab] = useState('analysis');
+  const [embedAllowed, setEmbedAllowed] = useState(true);
+  const [embedLoading, setEmbedLoading] = useState(true);
+  const embedRef = useRef(null);
 
-  // Simple initialization
+  // Simple initialization + engine wiring
   useEffect(() => {
     console.log('🚀 Ultra-Enhanced Voice Emotion System initialized');
-    console.log('� 18+ emotions ready for testing');
+    console.log('🎯 18+ emotions ready for testing');
+
+    // Initialize engines if not provided
+    if (!ultraEngineRef.current) {
+      try {
+        ultraEngineRef.current = new UltraEnhancedEmotionEngine();
+        console.debug('🔧 UltraEngine initialized');
+      } catch (e) {
+        console.warn('⚠️ Could not initialize UltraEngine, continuing with limited features', e);
+        ultraEngineRef.current = null;
+      }
+    }
+
+    if (!fusionEngineRef.current) {
+      try {
+        fusionEngineRef.current = new SentimentFusionEngine();
+        console.debug('🔧 FusionEngine initialized');
+      } catch (e) {
+        console.warn('⚠️ Could not initialize FusionEngine', e);
+        fusionEngineRef.current = null;
+      }
+    }
+
+    if (!bertAnalyzerRef.current) {
+      // Use the exported enhanced analyzer instance
+      bertAnalyzerRef.current = enhancedBertAnalyzer;
+      console.debug('🔧 Enhanced BERT Analyzer bound');
+    }
+
+    // Initialize Hubert / DistilHubert analyzers lazily
+    (async () => {
+      if (!hubertRef.current) {
+        try {
+          hubertRef.current = new HubertAnalyzer();
+          await hubertRef.current.init();
+          console.debug('🔧 HubertAnalyzer initialized');
+        } catch (e) {
+          console.warn('⚠️ HubertAnalyzer failed to initialize', e);
+          hubertRef.current = null;
+        }
+      }
+
+      if (!distilHubertRef.current) {
+        try {
+          distilHubertRef.current = new DistilHubertAnalyzer();
+          await distilHubertRef.current.init();
+          console.debug('🔧 DistilHubertAnalyzer initialized');
+        } catch (e) {
+          console.warn('⚠️ DistilHubertAnalyzer failed to initialize', e);
+          distilHubertRef.current = null;
+        }
+      }
+    })();
   }, []);
 
   // Audio file processing with ultra-enhanced analysis
   const processAudioFile = async (file) => {
-    if (!ultraEngine || !fusionEngine || !bertAnalyzer) {
-      console.error('❌ Ultra-enhanced engines not initialized');
-      setFileProcessingStatus('Engines not ready');
-      return null;
+    // Deterministic fingerprint for a file-like object: prefer name/size/lastModified, fallback to text hash
+    const makeFingerprint = async (f) => {
+      try {
+        if (!f) return 'no-file';
+        if (f.name && f.size != null && f.lastModified != null) {
+          return `${f.name}::${f.size}::${f.lastModified}`;
+        }
+        // if file contains text property (test runner) use that
+        if (typeof f.text === 'string') {
+          // simple stable hash (djb2)
+          let hash = 5381;
+          for (let i = 0; i < f.text.length; i++) {
+            hash = ((hash << 5) + hash) + f.text.charCodeAt(i);
+            hash = hash & 0xffffffff;
+          }
+          return `text::${hash}`;
+        }
+        return JSON.stringify(f).slice(0,200);
+      } catch (e) {
+        return 'fingerprint-error';
+      }
+    };
+
+    const fingerprint = await makeFingerprint(file);
+    if (analysisCacheRef.current.has(fingerprint)) {
+      const cached = analysisCacheRef.current.get(fingerprint);
+      console.debug('♻️ Returning cached analysis for fingerprint', fingerprint, cached);
+      // update state from cached result
+      setEmotions(cached.emotions);
+      setDominantEmotion(cached.dominantEmotion);
+      setVoiceFeatures(cached.voiceFeatures || {});
+      if (cached.transcript) setTranscript(cached.transcript);
+      if (onEmotionDetected) {
+        onEmotionDetected({ ...cached, analysis: cached.fusionType || 'cached' });
+      }
+      setFileProcessingStatus('✅ Analysis returned from cache');
+      return cached;
     }
-    
+    const ultraEngine = ultraEngineRef.current;
+    const fusionEngine = fusionEngineRef.current;
+    const bertAnalyzer = bertAnalyzerRef.current;
+    const hubert = hubertRef.current;
+    const distilHubert = distilHubertRef.current;
+
+    if (!ultraEngine) {
+      console.warn('⚠️ UltraEngine not available, using fallback analysis');
+    }
+
     try {
       setFileProcessingStatus('🔄 Ultra-enhanced analysis in progress...');
-      console.log('🎵 Processing audio file with ultra-enhanced system:', file.name);
-      
-      // Process with ultra-enhanced emotion engine
-      const emotionResult = await ultraEngine.processAudioFile(file);
-      console.log('🎭 Ultra-enhanced emotion analysis:', emotionResult);
-      
-      // Enhance with sentiment fusion
-      if (emotionResult.transcript) {
-        const sentimentResult = await fusionEngine.analyzeSentimentFusion(emotionResult.transcript);
-        console.log('💫 Sentiment fusion result:', sentimentResult);
-        
-        // Enhance with BERT analysis
-        const bertResult = await bertAnalyzer.analyzeAdvanced(emotionResult.transcript);
-        console.log('🤖 Advanced BERT analysis:', bertResult);
-        
-        // Combine all results with weighted fusion
-        const finalResult = combineAnalysisResults(emotionResult, sentimentResult, bertResult);
-        
-        // Update state with enhanced results
-        setEmotions(finalResult.emotions);
-        setDominantEmotion(finalResult.dominantEmotion);
-        setVoiceFeatures(finalResult.voiceFeatures);
-        setTranscript(emotionResult.transcript);
-        
-        // Callback with ultra-enhanced data
-        if (onEmotionDetected) {
-          onEmotionDetected({
-            emotion: finalResult.dominantEmotion,
-            confidence: finalResult.confidence,
-            features: finalResult.voiceFeatures,
+      setIsProcessing(true);
+      console.log('🎵 Processing audio file with ultra-enhanced system:', file.name || '[test-sample]');
+
+      // Process with ultra-enhanced emotion engine (fallback to local util if missing)
+      const emotionResult = ultraEngine
+        ? await ultraEngine.processAudioFile(file)
+        : { emotions: { neutral: 70 }, confidence: 70, transcript: file.name ? '' : (file.text || ''), voiceFeatures: {} };
+
+      console.debug('🎭 Voice analysis result:', emotionResult);
+
+      // Use transcript if present for text analysis
+      const transcriptText = emotionResult.transcript || (file && file.name ? '' : (file.text || ''));
+
+      let sentimentResult = null;
+      if (fusionEngine && transcriptText) {
+        sentimentResult = await fusionEngine.analyzeSentimentFusion(transcriptText);
+        console.debug('💫 Sentiment fusion result:', sentimentResult);
+      }
+
+
+      // Run all BERT-related models
+      const bertResults = [];
+      if (transcriptText) {
+        // 1. EnhancedBERTAnalyzer (ensemble)
+        try {
+          const wordCount = transcriptText.split(/\s+/).length;
+          const options = { includeConfidenceCalibration: true };
+          if (wordCount > 40) {
+            options.useContextWindow = true;
+            options.enableEnsemble = true;
+          } else if (wordCount > 8) {
+            options.sentenceLevel = true;
+          }
+          const result = await analyzeEmotionWithEnhancedBERT(transcriptText, options);
+          bertResults.push({ name: 'EnhancedBERT', ...result });
+          console.debug('🤖 EnhancedBERT:', result);
+        } catch (e) { console.warn('EnhancedBERT failed', e); }
+
+        // 2. Classic BERT API
+        try {
+          const result = await analyzeEmotionWithBERT(transcriptText);
+          bertResults.push({ name: 'ClassicBERT', ...result });
+          console.debug('🤖 ClassicBERT:', result);
+        } catch (e) { console.warn('ClassicBERT failed', e); }
+
+        // 3. NovelBERTEnhancementSystem (DistilBERT)
+        try {
+          const result = await novelBERTEnhancementSystem.analyze(transcriptText);
+          bertResults.push({ name: 'NovelDistilBERT', ...result });
+          console.debug('🤖 NovelDistilBERT:', result);
+        } catch (e) { console.warn('NovelDistilBERT failed', e); }
+
+        // 4. AdvancedBERTAnalyzer (DistilRoBERTa, RoBERTa)
+        try {
+          const result = await advancedBERTAnalyzer.analyze(transcriptText);
+          bertResults.push({ name: 'AdvancedBERT', ...result });
+          console.debug('🤖 AdvancedBERT:', result);
+        } catch (e) { console.warn('AdvancedBERT failed', e); }
+
+        // 5. BertTranscriptAnalyzer (DistilBERT zero-shot/sentiment)
+        try {
+          const result = await bertTranscriptAnalyzer.analyze(transcriptText);
+          bertResults.push({ name: 'TranscriptBERT', ...result });
+          console.debug('🤖 TranscriptBERT:', result);
+        } catch (e) { console.warn('TranscriptBERT failed', e); }
+
+        // 6. BertEmotionEnhancer (DistilRoBERTa, DistilBERT)
+        try {
+          const result = await bertEmotionEnhancer.analyze(transcriptText);
+          bertResults.push({ name: 'EmotionEnhancerBERT', ...result });
+          console.debug('🤖 EmotionEnhancerBERT:', result);
+        } catch (e) { console.warn('EmotionEnhancerBERT failed', e); }
+      }
+
+      // Hubert / DistilHubert audio analyses
+      let hubertResult = null;
+      let distilResult = null;
+      try {
+        if (hubert && typeof hubert.analyzeAudio === 'function') {
+          hubertResult = await hubert.analyzeAudio({ transcript: transcriptText, file });
+          console.debug('🎧 Hubert analysis:', hubertResult);
+        }
+      } catch (e) {
+        console.warn('Hubert analysis failed', e);
+        hubertResult = null;
+      }
+
+      try {
+        if (distilHubert && typeof distilHubert.analyzeAudio === 'function') {
+          distilResult = await distilHubert.analyzeAudio({ transcript: transcriptText, file });
+          console.debug('🎧 DistilHubert analysis:', distilResult);
+        }
+      } catch (e) {
+        console.warn('DistilHubert analysis failed', e);
+        distilResult = null;
+      }
+
+      // Fuse all BERT results
+      let fusedBert = null;
+      if (bertResults && bertResults.length > 0) {
+        // Average emotion scores and confidence
+        const allKeys = Array.from(new Set(bertResults.flatMap(r => Object.keys(r.emotions || {}))));
+        const avgScores = {};
+        allKeys.forEach(k => {
+          avgScores[k] = bertResults.map(r => (r.emotions?.[k] || 0)).reduce((a,b)=>a+b,0) / bertResults.length;
+        });
+        const avgConfidence = bertResults.map(r => r.confidence || 0).reduce((a,b)=>a+b,0) / bertResults.length;
+        fusedBert = { emotions: avgScores, confidence: avgConfidence };
+      }
+
+      // Combine results and normalize
+      const finalResult = combineAnalysisResults(emotionResult, sentimentResult, fusedBert, hubertResult, distilResult);
+
+      // Update state with enhanced results
+  setEmotions(finalResult.emotions);
+  setDominantEmotion(finalResult.dominantEmotion);
+  setVoiceFeatures(finalResult.voiceFeatures || emotionResult.voiceFeatures || {});
+  if (transcriptText) setTranscript(transcriptText);
+  setEmotionExplanation(finalResult.explanation || '');
+
+      // store in cache for deterministic repeat uploads
+      try {
+        if (typeof fingerprint !== 'undefined' && fingerprint) {
+          analysisCacheRef.current.set(fingerprint, {
             emotions: finalResult.emotions,
-            analysis: 'ultra-enhanced'
+            dominantEmotion: finalResult.dominantEmotion,
+            confidence: finalResult.confidence,
+            voiceFeatures: finalResult.voiceFeatures || {},
+            transcript: transcriptText || finalResult.transcript || '',
+            fusionType: finalResult.fusionType || 'ultra-enhanced'
           });
         }
-        
-        setFileProcessingStatus('✅ Ultra-enhanced analysis complete!');
-        return finalResult;
+      } catch (e) {
+        // caching failing shouldn't break analysis
+        console.warn('Cache store failed', e);
       }
-      
-      setFileProcessingStatus('');
-      return emotionResult;
-      
+
+      // Callback with ultra-enhanced data
+      if (onEmotionDetected) {
+        onEmotionDetected({
+          emotion: finalResult.dominantEmotion,
+          confidence: finalResult.confidence,
+          features: finalResult.voiceFeatures,
+          emotions: finalResult.emotions,
+          analysis: 'ultra-enhanced'
+        });
+      }
+
+      setFileProcessingStatus('✅ Ultra-enhanced analysis complete!');
+      return finalResult;
+
     } catch (error) {
       console.error('❌ Ultra-enhanced processing failed:', error);
       setFileProcessingStatus('❌ Processing failed');
       return null;
+    } finally {
+      setIsProcessing(false);
     }
   };
 
   // Combine results from all three engines with advanced weighting
-  const combineAnalysisResults = (emotionResult, sentimentResult, bertResult) => {
-    console.log('🔄 Combining ultra-enhanced analysis results...');
-    
-    const combinedEmotions = { ...emotionResult.emotions };
-    
-    // Apply sentiment fusion weighting (25% boost)
-    if (sentimentResult && sentimentResult.emotions) {
-      Object.entries(sentimentResult.emotions).forEach(([emotion, score]) => {
-        if (combinedEmotions[emotion]) {
-          combinedEmotions[emotion] = (combinedEmotions[emotion] * 0.75) + (score * 0.25);
-        } else {
-          combinedEmotions[emotion] = score * 0.25;
-        }
-      });
+  const combineAnalysisResults = (emotionResult = {}, sentimentResult = {}, bertResult = {}, hubertResult = {}, distilResult = {}) => {
+    console.debug('🔄 Combining ultra-enhanced analysis results (BERT-weighted)...');
+
+    // Helper: normalize score objects to 0-100
+    const normalize = (obj) => {
+      if (!obj) return {};
+      const keys = Object.keys(obj);
+      if (keys.length === 0) return {};
+      const maxVal = Math.max(...keys.map(k => obj[k] || 0));
+      // if scores look like 0..1, scale to 0..100
+      const scale = maxVal <= 1 ? 100 : 1;
+      const out = {};
+      keys.forEach(k => { out[k] = (obj[k] || 0) * scale; });
+      return out;
+    };
+
+  const voiceScores = normalize(emotionResult.emotions || {});
+  const textScores = normalize(sentimentResult?.emotions || {});
+  const bertScores = normalize(bertResult?.emotions || {});
+  const hubertScores = normalize(hubertResult?.emotions || {});
+  const distilScores = normalize(distilResult?.emotions || {});
+
+    // Determine dynamic weights (give BERT more influence when its confidence is high)
+    // Base weights (will be normalized). Hubert models get a moderate default weight.
+    const baseWeights = { voice: 0.45, text: 0.10, bert: 0.25, hubert: 0.12, distil: 0.08 };
+    const bertConfidenceFactor = Math.min(1, (bertResult?.confidence || 0) / 100);
+    const weights = {
+      voice: baseWeights.voice,
+      text: baseWeights.text,
+      bert: baseWeights.bert * (0.6 + 0.8 * bertConfidenceFactor) // scale bert between 0.6x-1.4x depending on confidence
+    };
+
+    // Scale hubert weights by their confidence if present
+    const hubertConfidenceFactor = Math.min(1, (hubertResult?.confidence || 0) / 100);
+    const distilConfidenceFactor = Math.min(1, (distilResult?.confidence || 0) / 100);
+    weights.hubert = baseWeights.hubert * (0.7 + 0.6 * hubertConfidenceFactor);
+    weights.distil = baseWeights.distil * (0.6 + 0.5 * distilConfidenceFactor);
+
+    // Normalize weights to sum to 1
+    const weightSum = weights.voice + weights.text + weights.bert;
+    weights.voice /= weightSum;
+    weights.text /= weightSum;
+    weights.bert /= weightSum;
+
+    // Union of all emotion keys
+    // Apply lexical keyword boosting: if ultraEngine provides strong keyword matches, nudge scores
+    const allKeys = Array.from(new Set([
+      ...Object.keys(voiceScores),
+      ...Object.keys(textScores),
+      ...Object.keys(bertScores),
+      ...Object.keys(hubertScores),
+      ...Object.keys(distilScores)
+    ]));
+    // Lexical boost from ultraEngine profiles
+    try {
+      const profiles = ultraEngineRef.current?.emotionProfiles || {};
+      if (profiles && Object.keys(profiles).length > 0 && (sentimentResult?.text || bertResult?.text || emotionResult.transcript)) {
+        const textBody = (sentimentResult?.text || bertResult?.text || emotionResult.transcript || '').toLowerCase();
+        Object.keys(profiles).forEach(em => {
+          const keywords = profiles[em]?.keywords || [];
+          keywords.forEach(kw => {
+            if (kw && textBody.includes(kw)) {
+              // add a small boost to that emotion key
+              if (!allKeys.includes(em)) allKeys.push(em);
+                combined[em] = (combined[em] || 0) + 8; // +8 points lexical boost
+            }
+          });
+        });
+      }
+    } catch (e) {
+      // ignore lexical boosting failures
     }
-    
-    // Apply BERT enhancement (10% boost for precision)
-    if (bertResult && bertResult.emotions) {
-      Object.entries(bertResult.emotions).forEach(([emotion, score]) => {
-        if (combinedEmotions[emotion]) {
-          combinedEmotions[emotion] = (combinedEmotions[emotion] * 0.9) + (score * 0.1);
-        } else {
-          combinedEmotions[emotion] = score * 0.1;
-        }
-      });
+    const combined = {};
+    allKeys.forEach(k => {
+        const v = (voiceScores[k] || 0) * weights.voice
+                + (textScores[k] || 0) * weights.text
+                + (bertScores[k] || 0) * weights.bert
+                + (hubertScores[k] || 0) * weights.hubert
+                + (distilScores[k] || 0) * weights.distil;
+      combined[k] = v;
+    });
+
+    // Penalize contradictions conservatively (reduce pairs by 30%)
+    const contradictionPairs = [ ['joy','sadness'], ['joy','anger'], ['sadness','anger'], ['fear','confidence'], ['excitement','melancholy'], ['love','disgust'] ];
+    contradictionPairs.forEach(([a,b]) => {
+      if (combined[a] && combined[b]) {
+        combined[a] *= 0.7;
+        combined[b] *= 0.7;
+      }
+    });
+
+    // Smoothing and scaling: convert to percentages that sum to ~100
+    const total = Object.values(combined).reduce((s,v) => s + Math.max(0, v), 0) || 1;
+    const scaled = {};
+    Object.entries(combined).forEach(([k,v]) => {
+      scaled[k] = Math.round((Math.max(0, v) / total) * 100 * 10) / 10; // one decimal
+    });
+
+    // Determine dominant emotion and mixed cases
+    const sorted = Object.entries(scaled).sort(([,a],[,b]) => b - a);
+    let dominant = 'neutral';
+    let isMixed = false;
+    if (sorted.length > 0) {
+      const [top, topScore] = sorted[0];
+      const [second, secondScore] = sorted[1] || [null, 0];
+      if (secondScore && (topScore - secondScore) < 8) {
+        // close scores -> mixed
+        dominant = `${top} + ${second}`;
+        isMixed = true;
+      } else {
+        dominant = top;
+      }
     }
-    
-    // Find dominant emotion
-    const dominantEmotion = Object.entries(combinedEmotions)
-      .sort(([,a], [,b]) => b - a)[0][0];
-    
-    // Calculate combined confidence
-    const combinedConfidence = Math.min(100, 
-      (emotionResult.confidence * 0.65) + 
-      ((sentimentResult?.confidence || 0.5) * 0.25) + 
-      ((bertResult?.confidence || 0.5) * 0.1)
-    );
-    
-    console.log(`🎯 ULTRA-ENHANCED RESULT: ${dominantEmotion} (${combinedConfidence.toFixed(1)}% confidence)`);
-    
+
+    // Combined confidence: weighted by component confidences
+    // Combined confidence: weighted by component confidences (weights normalized earlier)
+    const cVoice = (emotionResult.confidence || 50);
+    const cText = (sentimentResult?.confidence || 50);
+    const cBert = (bertResult?.confidence || (bertConfidenceFactor * 100) || 50);
+    const cHubert = (hubertResult?.confidence || (hubertConfidenceFactor * 100) || 50);
+    const cDistil = (distilResult?.confidence || (distilConfidenceFactor * 100) || 50);
+
+    const combinedConfidence = Math.min(100, (
+      cVoice * weights.voice +
+      cText * weights.text +
+      cBert * weights.bert +
+      cHubert * weights.hubert +
+      cDistil * weights.distil
+    ));
+
+    console.debug(`🎯 ULTRA-ENHANCED RESULT: ${dominant} (${combinedConfidence.toFixed(1)}% confidence)`);
+
     return {
-      emotions: combinedEmotions,
-      dominantEmotion,
-      confidence: combinedConfidence,
-      voiceFeatures: emotionResult.voiceFeatures,
-      transcript: emotionResult.transcript,
-      fusionType: 'ultra-enhanced'
+      emotions: scaled,
+      dominantEmotion: dominant,
+      confidence: Math.round(combinedConfidence * 10) / 10,
+      voiceFeatures: emotionResult.voiceFeatures || {},
+      transcript: emotionResult.transcript || '',
+      fusionType: 'ultra-enhanced',
+      isMixed
     };
   };
-
-  // Test with emotion samples
   const testWithEmotionSample = async (emotionType) => {
     if (!testSamples[emotionType]) return;
     
@@ -550,7 +879,7 @@ const VoiceEmotionSystem = ({ onEmotionDetected, isVisible = true }) => {
           className={`viz-toggle ${showAdvancedMetrics ? 'active' : ''}`}
           onClick={() => setShowAdvancedMetrics(!showAdvancedMetrics)}
         >
-          📊 Advanced Metrics
+          📊 Advanced 
         </button>
         <button 
           className={`viz-toggle ${showEmotionRadar ? 'active' : ''}`}
@@ -593,6 +922,20 @@ const VoiceEmotionSystem = ({ onEmotionDetected, isVisible = true }) => {
       </div>
 
       <div className="control-panel">
+        <div className="tab-controls">
+          <button
+            className={`tab-btn ${activeTab === 'analysis' ? 'active' : ''}`}
+            onClick={() => setActiveTab('analysis')}
+          >
+            🔍 Analysis
+          </button>
+          <button
+            className={`tab-btn ${activeTab === 'models' ? 'active' : ''}`}
+            onClick={() => setActiveTab('models')}
+          >
+            🧩 Models
+          </button>
+        </div>
         <div className="upload-section">
           <label className="upload-button">
             📁 Upload Audio File
@@ -614,9 +957,79 @@ const VoiceEmotionSystem = ({ onEmotionDetected, isVisible = true }) => {
             {isRecording ? '⏹️ Stop Recording' : '🎤 Start Live Analysis'}
           </button>
         </div>
+
+        {/* Panels: Analysis (default) and Models (external links) */}
+        {activeTab === 'analysis' && (
+          <div className="recording-section">
+            <button 
+              onClick={isRecording ? stopRecording : startRecording}
+              disabled={systemStatus !== 'ready'}
+              className={`record-button ${isRecording ? 'recording' : ''}`}
+            >
+              {isRecording ? '⏹️ Stop Recording' : '🎤 Start Live Analysis'}
+            </button>
+          </div>
+        )}
+
+        {activeTab === 'models' && (
+          <div className="models-panel">
+            <h4 style={{margin: '0 0 8px 0'}}>🔗 External Models & Tools</h4>
+            <div className="models-list">
+              <div className="external-model-link">
+                {embedAllowed ? (
+                  <div className="embed-wrapper">
+                    {embedLoading && <div className="embed-loading">Loading embedded UltimateEmotion…</div>}
+                    <iframe
+                      ref={embedRef}
+                      title="UltimateEmotion"
+                      src="https://ultimateemotion.netlify.app/"
+                      className="embedded-site"
+                      onLoad={() => { 
+                        // loaded visually; attempt a gentle check for embedding allowance
+                        setEmbedLoading(false);
+                        try {
+                          // Some sites disallow framing (X-Frame-Options) and will throw when accessing contentWindow
+                          const cw = embedRef.current && embedRef.current.contentWindow;
+                          if (cw) {
+                            // Attempt to access a property; cross-origin access will throw
+                            // eslint-disable-next-line no-unused-expressions
+                            cw.location && cw.location.href;
+                          }
+                        } catch (err) {
+                          // Embedding not allowed or cross-origin deny — fall back to link
+                          setEmbedAllowed(false);
+                        }
+                      }}
+                      sandbox="allow-scripts allow-popups allow-forms"
+                    />
+                  </div>
+                ) : (
+                  <a
+                    href="https://ultimateemotion.netlify.app/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="external-button"
+                    title="Open UltimateEmotion in a new tab"
+                  >
+                    🌐 Open UltimateEmotion
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      {Object.keys(emotions).length > 0 && renderEmotionDisplay()}
+      {Object.keys(emotions).length > 0 && (
+        <>
+          {renderEmotionDisplay()}
+          {/* Explanation panel */}
+          <div className="emotion-explanation" style={{marginTop:20, background:'rgba(255,255,255,0.08)', padding:16, borderRadius:8}}>
+            <h4>🧠 Emotion Explanation</h4>
+            <p>{emotionExplanation}</p>
+          </div>
+        </>
+      )}
       
       {transcript && (
         <div className="transcript-display">
@@ -625,7 +1038,7 @@ const VoiceEmotionSystem = ({ onEmotionDetected, isVisible = true }) => {
         </div>
       )}
 
-      <style jsx>{`
+  <style>{`
         .voice-emotion-system.ultra-enhanced {
           padding: 20px;
           border-radius: 12px;
@@ -705,6 +1118,33 @@ const VoiceEmotionSystem = ({ onEmotionDetected, isVisible = true }) => {
         .upload-button input {
           display: none;
         }
+
+        /* External model link styling (UltimateEmotion) */
+        .external-model-link {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .external-button {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          background: linear-gradient(135deg, #06b6d4, #10b981);
+          color: white;
+          padding: 10px 14px;
+          border-radius: 10px;
+          text-decoration: none;
+          font-weight: 700;
+          box-shadow: 0 6px 18px rgba(2,6,23,0.45);
+          transition: transform 0.12s ease, box-shadow 0.12s ease;
+        }
+
+        .external-button:hover {
+          transform: translateY(-3px);
+          box-shadow: 0 10px 28px rgba(2,6,23,0.55);
+        }
+
 
         .record-button {
           background: #ef4444;
@@ -833,6 +1273,48 @@ const VoiceEmotionSystem = ({ onEmotionDetected, isVisible = true }) => {
           background: linear-gradient(135deg, #10b981, #06d6a0);
           border-color: #10b981;
           box-shadow: 0 5px 15px rgba(16, 185, 129, 0.4);
+        }
+
+        /* Tab controls for Analysis / Models */
+        .tab-controls {
+          display: flex;
+          gap: 10px;
+          align-items: center;
+          justify-content: center;
+          margin-bottom: 12px;
+        }
+
+        .tab-btn {
+          padding: 8px 14px;
+          background: rgba(255,255,255,0.06);
+          color: white;
+          border-radius: 999px;
+          border: 1px solid transparent;
+          cursor: pointer;
+          font-weight: 700;
+        }
+
+        .tab-btn.active {
+          background: linear-gradient(90deg,#06b6d4,#10b981);
+          box-shadow: 0 6px 18px rgba(2,6,23,0.45);
+          transform: translateY(-2px);
+          border-color: rgba(255,255,255,0.12);
+        }
+
+        .models-panel {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .models-list {
+          display: flex;
+          gap: 10px;
+          flex-wrap: wrap;
+          justify-content: center;
+          margin-top: 6px;
         }
         
         /* Test Samples Panel */

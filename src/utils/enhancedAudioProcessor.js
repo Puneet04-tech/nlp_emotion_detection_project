@@ -2,11 +2,12 @@
 import { realVoskManager } from './realVoskManager.js';
 import { alternativeVoskManager } from './alternativeVoskManager.js';
 import { mockVoskManager } from './mockVoskManager.js';
+import { cloudSttManager } from './cloudSttManager.js';
 
 /**
  * Enhanced audio file processing with real Vosk transcription
  */
-export const processAudioFileEnhanced = async (file, onProgress = null, language = 'en-US', translationSettings = {}, forceVosk = false) => {
+export const processAudioFileEnhanced = async (file, onProgress = null, language = 'en-US', translationSettings = {}, forceVosk = false, forceCloud = false) => {
   if (onProgress) onProgress(`🎵 Processing audio file: ${file.name}...`);
 
   try {
@@ -47,8 +48,33 @@ export const processAudioFileEnhanced = async (file, onProgress = null, language
       }
     }
 
-    // Fallback 3: Mock Manager
+    // Fallback 3: Cloud STT (if requested) or Mock Manager
     if (!voskManager) {
+      if (forceCloud) {
+        if (onProgress) onProgress('☁️ Using Cloud STT as fallback (forceCloud=true)...');
+        try {
+          // initialize cloud manager with a config read from environment or translationSettings
+          const cloudConfig = (translationSettings && translationSettings.cloudStt) || {};
+          await cloudSttManager.initialize(cloudConfig);
+          const cloudRes = await cloudSttManager.transcribeAudio(file, onProgress);
+          if (cloudRes && cloudRes.success && cloudRes.text) {
+            return {
+              success: true,
+              transcript: cloudRes.text,
+              audioTranscript: cloudRes.text,
+              content: cloudRes.text,
+              audioInfo: { fileName: file.name },
+              processingInfo: { method: 'Cloud STT', provider: cloudRes.provider || cloudConfig.provider }
+            };
+          }
+          // If cloud failed, fall through to mock
+          if (onProgress) onProgress('⚠️ Cloud STT failed, falling back to mock');
+        } catch (err) {
+          console.warn('Cloud STT error:', err && err.message ? err.message : err);
+          if (onProgress) onProgress('⚠️ Cloud STT initialization failed - falling back to mock');
+        }
+      }
+
       if (onProgress) onProgress('⚠️ Real Vosk unavailable, using mock transcription...');
       if (!mockVoskManager.loadedModel) {
         await mockVoskManager.initialize(onProgress);

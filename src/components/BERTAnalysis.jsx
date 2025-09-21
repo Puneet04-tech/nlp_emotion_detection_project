@@ -80,7 +80,7 @@ const BERTAnalysis = ({ transcript }) => {
 
   return (
     <div className="bert-analysis-container">
-      <style jsx>{`
+  <style>{`
         .bert-analysis-container {
           max-width: 1200px;
           margin: 0 auto;

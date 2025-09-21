@@ -284,7 +284,7 @@ const VoiceEmotionSystem = ({ onEmotionDetected, isVisible = true, onTrainingDat
         text: `Voice recording detected ${randomEmotion} with ${confidence}% confidence`,
         type: 'voice-recording',
         source: 'microphone',
-        allEmotions: newEmotionResults
+        allEmotions: enhancedResults
       };
       
       console.log('✅ Audio processing complete:', result);
@@ -336,7 +336,7 @@ const VoiceEmotionSystem = ({ onEmotionDetected, isVisible = true, onTrainingDat
         type: 'audio-upload',
         source: 'file',
         filename: file.name,
-        allEmotions: newEmotionResults
+        allEmotions: enhancedResults
       };
       
       console.log('✅ File processing complete:', result);
@@ -353,30 +353,34 @@ const VoiceEmotionSystem = ({ onEmotionDetected, isVisible = true, onTrainingDat
   };
 
   // Load Training Data from Server to enhance predictions
+  // Guard so we only try once per app load to avoid noisy repeated errors
+  let serverTrainingFetchAttempted = false;
   const loadServerTrainingData = async () => {
-    if (trainingDataLoaded) return;
-    
+    if (trainingDataLoaded || serverTrainingFetchAttempted) return;
+    serverTrainingFetchAttempted = true;
+
     setIsLoadingTrainingData(true);
     try {
       const response = await fetch('http://localhost:4000/api/stats');
       if (response.ok) {
         const stats = await response.json();
-        console.log('📊 Server stats loaded:', stats);
-        
-        // Try to get actual training files metadata  
+        console.debug('📊 Server stats loaded:', stats);
+
+        // Try to get actual training files metadata
         const metaResponse = await fetch('http://localhost:4000/api/training-data');
         if (metaResponse.ok) {
           const trainingMeta = await metaResponse.json();
           setServerTrainingData(trainingMeta);
           setTrainingDataLoaded(true);
-          console.log('🎓 Training data loaded from server:', trainingMeta);
+          console.debug('🎓 Training data loaded from server:', trainingMeta);
         } else {
-          console.log('📈 Using server stats for emotion enhancement');
+          console.debug('📈 Using server stats for emotion enhancement');
           setTrainingDataLoaded(true);
         }
       }
     } catch (error) {
-      console.log('⚡ Server training data not available, using local patterns');
+      // Fail quietly once - fallback to local patterns
+      console.debug('⚡ Server training data not available, using local patterns');
     } finally {
       setIsLoadingTrainingData(false);
     }
@@ -439,7 +443,7 @@ const VoiceEmotionSystem = ({ onEmotionDetected, isVisible = true, onTrainingDat
     setDominantEmotion(emotionType);
     setDominantConfidence(primaryConfidence);
     
-    console.log(`🎭 Generated ${emotionType} results:`, newEmotionResults);
+  console.log(`🎭 Generated ${emotionType} results:`, enhancedResults);
     
     // Simulate processing time
     await new Promise(resolve => setTimeout(resolve, 1500));
@@ -450,7 +454,7 @@ const VoiceEmotionSystem = ({ onEmotionDetected, isVisible = true, onTrainingDat
         confidence: primaryConfidence,
         text: testSamples[emotionType].text,
         type: 'ultra-enhanced-test',
-        allEmotions: newEmotionResults
+        allEmotions: enhancedResults
       });
     }
     
@@ -791,7 +795,7 @@ const VoiceEmotionSystem = ({ onEmotionDetected, isVisible = true, onTrainingDat
         </div>
       )}
 
-      <style jsx>{`
+  <style>{`
         .ultra-enhanced-emotion-system {
           padding: 20px;
           background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);

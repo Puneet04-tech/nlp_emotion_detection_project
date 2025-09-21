@@ -1142,7 +1142,7 @@ class EnhancedVoiceAnalyzer {
 }
 
 // Training Center Component
-const TrainingCenter = ({ analyzer = null, currentTranscript = '', isRecording = false }) => {
+const TrainingCenter = ({ analyzer = null, currentTranscript = '', isRecording = false, externalTrainingSamples = [] }) => {
   const [selectedEmotion, setSelectedEmotion] = useState('happy');
   const [isTraining, setIsTraining] = useState(false);
   const [trainingStats, setTrainingStats] = useState({});
@@ -1234,6 +1234,46 @@ const TrainingCenter = ({ analyzer = null, currentTranscript = '', isRecording =
   const activeRecording = isRecording || isLocalRecording;
   // Alias for training manager / storage (may be null until analyzer initialized)
   const voiceManager = activeAnalyzer ? activeAnalyzer.trainingManager : null;
+
+  // Accept external training samples pushed from other components (eg. VoiceEmotionSystem)
+  useEffect(() => {
+    if (!externalTrainingSamples || !externalTrainingSamples.length) return;
+    (async () => {
+      try {
+        for (const sample of externalTrainingSamples) {
+          try {
+            // Avoid re-importing if already present in storage by checking id
+            const existing = await (voiceManager ? voiceManager.getVoiceSamples(sample.emotion).then(list => list.find(s => s.id === sample.id)) : Promise.resolve(null));
+            // Fallback: add to in-memory training dataset if no persistent manager
+            if (!existing) {
+              if (voiceManager && voiceManager.saveVoiceSample) {
+                // If sample contains audioBlob and features use them, otherwise pass minimal
+                const blob = sample.audioBlob || null;
+                const features = sample.features || sample.voiceFeatures || {};
+                // Save into indexedDB store for persistent examples (non-blocking)
+                try { await voiceManager.saveVoiceSample(sample.emotion || sample.label || 'unknown', blob, features, sample.transcript || ''); } catch(e) { /* ignore individual save failures */ }
+              }
+              // Also update in-memory training manager list if available
+              if (activeAnalyzer && activeAnalyzer.trainingManager && activeAnalyzer.trainingManager.trainingData) {
+                const emo = sample.emotion || sample.label || 'unknown';
+                if (!Array.isArray(activeAnalyzer.trainingManager.trainingData[emo])) activeAnalyzer.trainingManager.trainingData[emo] = [];
+                // add a compact record
+                activeAnalyzer.trainingManager.trainingData[emo].push({ id: sample.id || `ext_${Date.now()}`, emotion: emo, timestamp: new Date().toISOString(), voiceFeatures: sample.features || sample.voiceFeatures || {}, transcript: sample.transcript || '' });
+                activeAnalyzer.trainingManager.saveTrainingData();
+              }
+            }
+          } catch (innerErr) {
+            console.warn('Failed to import external training sample', innerErr);
+          }
+        }
+        // Refresh UI stats after import
+        if (activeAnalyzer) {
+          setTrainingStats(activeAnalyzer.getTrainingStats());
+          updateStorageStats();
+        }
+      } catch (e) { console.warn('External training import failed', e); }
+    })();
+  }, [externalTrainingSamples, activeAnalyzer]);
 
   useEffect(() => {
     if (activeAnalyzer) {

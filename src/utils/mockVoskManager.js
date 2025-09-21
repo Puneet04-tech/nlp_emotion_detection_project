@@ -10,6 +10,48 @@ class MockVoskManager {
     console.log('🎙️ MockVoskManager initialized');
   }
 
+  // Provide a recognizer-like object so diagnostics and other code can call
+  // createRecognizer(...) and use AcceptWaveform/FinalResult style APIs.
+  async createRecognizer(sampleRate = 16000) {
+    if (!this.isInitialized) {
+      // initialize with default model if not already
+      await this.initialize();
+    }
+
+    // simple internal buffer to collect audio (not used for real ASR)
+    let buffer = [];
+    let lastFinal = '';
+
+    const makeResult = (text) => JSON.stringify({ text });
+
+    const recognizer = {
+      // CamelCase and lowercase aliases
+      AcceptWaveform: (data) => {
+        try {
+          // Accept Int16Array or array-like
+          if (data && data.length) {
+            buffer.push(data.length);
+          }
+          // create a pseudo-transcript based on buffer length
+          lastFinal = `mock transcription (${buffer.reduce((a,b)=>a+b,0)} samples)`;
+          return true;
+        } catch (e) { return false; }
+      },
+      acceptWaveform: function(data) { return recognizer.AcceptWaveform(data); },
+
+      FinalResult: () => makeResult(lastFinal || 'mock final result'),
+      finalResult: () => recognizer.FinalResult(),
+
+      PartialResult: () => JSON.stringify({ partial: lastFinal ? lastFinal.slice(0, 20) : 'mock partial' }),
+      partialResult: () => recognizer.PartialResult(),
+
+      // optional helper to reset internal state
+      reset: () => { buffer = []; lastFinal = ''; }
+    };
+
+    return recognizer;
+  }
+
   async initialize(modelPath = 'vosk-model-small-en-us-0.15') {
     try {
       console.log('🔄 Initializing mock Vosk model...');
