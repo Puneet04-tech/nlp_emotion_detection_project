@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Revolutionary Emotional Complexity AI - Contradiction Intelligence System</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="app-header">
+            <h1 class="app-title">🎭 Emotional Complexity AI</h1>
+            <p class="app-subtitle">Revolutionary Contradiction Intelligence System - Embracing Emotional Depth</p>
+            <div class="philosophy-badge">
+                <span class="status status--info">Human emotions ARE contradictory and complex</span>
+            </div>
+        </header>
+
+        <!-- Contradiction Intelligence Info -->
+        <section class="contradiction-info card">
+            <div class="card__body">
+                <h3>🧠 Contradiction Intelligence Engine</h3>
+                <div class="intelligence-grid">
+                    <div class="intelligence-feature">
+                        <h4>🔍 Advanced Detection</h4>
+                        <p>Detects ALL emotion combinations including contradictory ones</p>
+                    </div>
+                    <div class="intelligence-feature">
+                        <h4>🧠 Psychological Interpretation</h4>
+                        <p>Sophisticated explanations for WHY contradictions occur</p>
+                    </div>
+                    <div class="intelligence-feature">
+                        <h4>⏰ Temporal Mapping</h4>
+                        <p>Tracks how emotions shift and conflict over time</p>
+                    </div>
+                    <div class="intelligence-feature">
+                        <h4>💡 Therapeutic Insights</h4>
+                        <p>Professional-level emotional complexity analysis</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Enhanced Settings Panel -->
+        <section class="settings-panel card">
+            <div class="card__body">
+                <h3>Analysis Configuration</h3>
+                <div class="settings-grid">
+                    <div class="setting-group">
+                        <label class="form-label">Emotion Detection Mode</label>
+                        <select id="detectionMode" class="form-control">
+                            <option value="comprehensive">Comprehensive + Contradictions</option>
+                            <option value="standard">Standard Detection</option>
+                        </select>
+                    </div>
+                    <div class="setting-group">
+                        <label class="form-label">Contradiction Sensitivity</label>
+                        <select id="contradictionSensitivity" class="form-control">
+                            <option value="high">High - Detect Subtle Conflicts</option>
+                            <option value="medium" selected>Medium - Clear Contradictions</option>
+                            <option value="low">Low - Major Conflicts Only</option>
+                        </select>
+                    </div>
+                    <div class="setting-group">
+                        <label class="form-label">Explanation Depth</label>
+                        <select id="explanationDepth" class="form-control">
+                            <option value="therapeutic">Therapeutic Level</option>
+                            <option value="detailed" selected>Detailed Insights</option>
+                            <option value="basic">Basic Explanations</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Audio Input Section -->
+        <section class="audio-input card">
+            <div class="card__body">
+                <h3>Audio Emotional Analysis</h3>
+                <div class="input-options">
+                    <div class="record-section">
+                        <button id="recordBtn" class="btn btn--primary">
+                            <span id="recordText">🎙️ Start Recording</span>
+                        </button>
+                        <div id="recordingStatus" class="recording-status hidden">
+                            <div class="recording-indicator"></div>
+                            <span>Recording... <span id="recordTime">00:00</span></span>
+                        </div>
+                    </div>
+                    <div class="upload-section">
+                        <input type="file" id="audioUpload" accept="audio/*" class="hidden">
+                        <button id="uploadBtn" class="btn btn--secondary">📁 Upload Audio File</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Processing Section -->
+        <section id="processingSection" class="processing-section card hidden">
+            <div class="card__body">
+                <h3>🎭 Emotional Complexity Analysis in Progress</h3>
+                <p class="processing-text">Analyzing emotional layers with contradiction intelligence...</p>
+                <div class="analysis-stages">
+                    <div class="stage-item">
+                        <span class="stage-name">🎵 Acoustic Analysis</span>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progress-acoustic"></div>
+                        </div>
+                        <span class="stage-status" id="status-acoustic">Extracting emotional patterns...</span>
+                    </div>
+                    <div class="stage-item">
+                        <span class="stage-name">📝 Semantic Analysis</span>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progress-semantic"></div>
+                        </div>
+                        <span class="stage-status" id="status-semantic">Understanding content meaning...</span>
+                    </div>
+                    <div class="stage-item">
+                        <span class="stage-name">🎭 Contradiction Detection</span>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progress-contradiction"></div>
+                        </div>
+                        <span class="stage-status" id="status-contradiction">Identifying emotional conflicts...</span>
+                    </div>
+                    <div class="stage-item">
+                        <span class="stage-name">🧠 Psychological Interpretation</span>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progress-psychological"></div>
+                        </div>
+                        <span class="stage-status" id="status-psychological">Generating deep insights...</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Results Section -->
+        <section id="resultsSection" class="results-section card hidden">
+            <div class="card__body">
+                <h3>🎭 Emotional Complexity Analysis Results</h3>
+                
+                <!-- Contradiction Alert -->
+                <div id="contradictionAlert" class="contradiction-alert hidden">
+                    <div class="alert-header">
+                        <span class="alert-icon">🎭</span>
+                        <h4>Complex Emotional State Detected</h4>
+                    </div>
+                    <div class="alert-body">
+                        <p id="contradictionSummary">Your emotional response shows sophisticated complexity...</p>
+                    </div>
+                </div>
+
+                <!-- Primary Emotions -->
+                <div class="emotions-container">
+                    <h4>Primary Emotional Patterns</h4>
+                    <div id="emotionResults" class="emotion-results">
+                        <!-- Emotions will be populated here -->
+                    </div>
+                </div>
+
+                <!-- Contradiction Analysis -->
+                <div id="contradictionAnalysis" class="contradiction-analysis hidden">
+                    <h4>🧠 Psychological Interpretation</h4>
+                    <div id="contradictionDetails" class="contradiction-details">
+                        <!-- Contradiction details will be populated here -->
+                    </div>
+                </div>
+
+                <!-- Therapeutic Insights -->
+                <div id="therapeuticInsights" class="therapeutic-insights">
+                    <h4>💡 Therapeutic Insights</h4>
+                    <div id="insightsList" class="insights-list">
+                        <!-- Insights will be populated here -->
+                    </div>
+                </div>
+
+                <!-- Emotional Complexity Score -->
+                <div class="complexity-score">
+                    <h4>📊 Emotional Complexity Analysis</h4>
+                    <div class="score-container">
+                        <div class="score-circle">
+                            <span id="complexityScore" class="score-number">0</span>
+                            <span class="score-label">Complexity Score</span>
+                        </div>
+                        <div class="score-explanation">
+                            <p id="complexityExplanation">Your emotional sophistication level...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="result-actions">
+                    <button id="exportBtn" class="btn btn--outline">📊 Export Analysis</button>
+                    <button id="deepAnalysisBtn" class="btn btn--secondary">🔬 Deep Dive Analysis</button>
+                    <button id="newAnalysisBtn" class="btn btn--primary">🎙️ New Analysis</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Deep Analysis Modal -->
+        <div id="deepAnalysisModal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>🔬 Deep Psychological Analysis</h3>
+                    <button id="closeModal" class="close-btn">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div id="deepAnalysisContent">
+                        <!-- Deep analysis content will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analysis History -->
+        <section class="history-section card">
+            <div class="card__body">
+                <h3>📈 Emotional Complexity History</h3>
+                <div id="historyList" class="history-list">
+                    <div class="empty-history">
+                        <p>No previous analyses. Start by recording or uploading audio to explore your emotional complexity.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
