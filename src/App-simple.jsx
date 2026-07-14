@@ -24,6 +24,9 @@ import AdvancedExportSystem from './components/AdvancedExportSystem';
 
 // Students study pack generator
 import StudentStudyAssistant from './components/StudentStudyAssistant';
+
+// UI Components
+import { StatusDisplay } from './components/ui';
 import './components/TranscriptAnalysis.css';
 import './components/EmotionDetectionIntegration.css';
 import './components/EnhancedTranscriptAnalysis.css';
@@ -1699,124 +1702,56 @@ function App() {
 
         {/* Translation Status Display */}
         {(isTranslating || showTranslationInfo) && (
-          <div className="translation-status" style={{
-            background: 'linear-gradient(120deg, #2a3f5f 60%, #1e3a5f 100%)', 
-            borderRadius: 14, 
-            boxShadow: '0 2px 16px #0005', 
-            padding: '18px', 
-            marginBottom: 24,
-            border: '1px solid #4f8cff'
-          }}>
-            {isTranslating ? (
-              <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
-                <div style={{
-                  width: 20, 
-                  height: 20, 
-                  border: '2px solid #4f8cff', 
-                  borderTop: '2px solid transparent', 
-                  borderRadius: '50%',
-                  animation: 'spin 1s linear infinite'
-                }}></div>
-                <span style={{color: '#4f8cff', fontWeight: 600}}>🌐 Translating content to English...</span>
-              </div>
-            ) : (showTranslationInfo && translationInfo) ? (
-              <div>
-                <div style={{display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10}}>
-                  <span style={{fontSize: '1.2em'}}>🌐</span>
-                  <span style={{color: '#7ed957', fontWeight: 700}}>Translation Applied</span>
-                </div>
-                <div style={{fontSize: '0.95em', color: '#b0b0c0', lineHeight: 1.4}}>
-                  <div><strong style={{color: '#4f8cff'}}>Original Language:</strong> {translationInfo.originalLanguage}</div>
-                  <div><strong style={{color: '#4f8cff'}}>Translation Method:</strong> {translationInfo.fallback ? 'Dictionary Fallback' : 'Google Translate API'}</div>
-                  {translationInfo.confidence && (
-                    <div><strong style={{color: '#4f8cff'}}>Confidence:</strong> {Math.round(translationInfo.confidence * 100)}%</div>
+          <StatusDisplay
+            variant={isTranslating ? 'processing' : 'info'}
+            title={isTranslating ? '🌐 Translating content to English...' : '🌐 Translation Applied'}
+            message={
+              isTranslating ? null : (
+                <div style={{fontSize: '0.95em', lineHeight: 1.4}}>
+                  <div><strong>Original Language:</strong> {translationInfo?.originalLanguage}</div>
+                  <div><strong>Translation Method:</strong> {translationInfo?.fallback ? 'Dictionary Fallback' : 'Google Translate API'}</div>
+                  {translationInfo?.confidence && (
+                    <div><strong>Confidence:</strong> {Math.round(translationInfo.confidence * 100)}%</div>
                   )}
                 </div>
-                <button 
-                  onClick={() => setShowTranslationInfo(false)}
-                  style={{
-                    background: '#f76e6e', 
-                    color: '#fff', 
-                    border: 'none', 
-                    borderRadius: 6, 
-                    padding: '4px 12px', 
-                    fontSize: '0.85em',
-                    marginTop: 8,
-                    cursor: 'pointer'
-                  }}
-                >
-                  Dismiss
-                </button>
-              </div>
-            ) : null}
-          </div>
+              )
+            }
+            onDismiss={!isTranslating ? () => setShowTranslationInfo(false) : undefined}
+            style={{marginBottom: 24}}
+          />
         )}
 
         {/* Grammar Correction Status Display */}
         {(isCorrectingGrammar || showGrammarInfo) && (
-          <div className="grammar-status" style={{
-            background: 'linear-gradient(120deg, #3f2a5f 60%, #5f1e3a 100%)', 
-            borderRadius: 14, 
-            boxShadow: '0 2px 16px #0005', 
-            padding: '18px', 
-            marginBottom: 24,
-            border: '1px solid #a97fff'
-          }}>
-            {isCorrectingGrammar ? (
-              <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
-                <div style={{
-                  width: 20, 
-                  height: 20, 
-                  border: '2px solid #a97fff', 
-                  borderTop: '2px solid transparent', 
-                  borderRadius: '50%',
-                  animation: 'spin 1s linear infinite'
-                }}></div>
-                <span style={{color: '#a97fff', fontWeight: 600}}>📝 Correcting grammar...</span>
-              </div>
-            ) : (showGrammarInfo && grammarCorrection) ? (
-              <div>
-                <div style={{display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10}}>
-                  <span style={{fontSize: '1.2em'}}>📝</span>
-                  <span style={{color: '#7ed957', fontWeight: 700}}>Grammar Corrections Applied</span>
-                </div>
-                <div style={{fontSize: '0.95em', color: '#b0b0c0', lineHeight: 1.4}}>
-                  <div><strong style={{color: '#a97fff'}}>Corrections Made:</strong> {grammarCorrection.totalCorrections}</div>
-                  <div><strong style={{color: '#a97fff'}}>Confidence:</strong> {Math.round(grammarCorrection.confidence * 100)}%</div>
-                  {grammarCorrection.summary.categories && Object.keys(grammarCorrection.summary.categories).length > 0 && (
-                    <div><strong style={{color: '#a97fff'}}>Types:</strong> {Object.keys(grammarCorrection.summary.categories).join(', ')}</div>
+          <StatusDisplay
+            variant={isCorrectingGrammar ? 'processing' : 'info'}
+            title={isCorrectingGrammar ? '📝 Correcting grammar...' : '📝 Grammar Corrections Applied'}
+            message={
+              isCorrectingGrammar ? null : (
+                <div style={{fontSize: '0.95em', lineHeight: 1.4}}>
+                  <div><strong>Corrections Made:</strong> {grammarCorrection?.totalCorrections}</div>
+                  <div><strong>Confidence:</strong> {Math.round(grammarCorrection?.confidence * 100)}%</div>
+                  {grammarCorrection?.summary?.categories && Object.keys(grammarCorrection.summary.categories).length > 0 && (
+                    <div><strong>Types:</strong> {Object.keys(grammarCorrection.summary.categories).join(', ')}</div>
+                  )}
+                  {grammarCorrection?.corrections && grammarCorrection.corrections.length > 0 && (
+                    <div style={{marginTop: 8}}>
+                      <strong>Examples:</strong>
+                      <ul style={{margin: '4px 0', paddingLeft: 16}}>
+                        {grammarCorrection.corrections.slice(0, 3).map((correction, idx) => (
+                          <li key={idx} style={{marginBottom: 2}}>
+                            {correction.category}: Fixed {correction.pattern.replace(/\\/g, '').slice(0, 30)}...
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   )}
                 </div>
-                {grammarCorrection.corrections && grammarCorrection.corrections.length > 0 && (
-                  <div style={{marginTop: 8, fontSize: '0.85em', color: '#9a9ac0'}}>
-                    <strong>Examples:</strong>
-                    <ul style={{margin: '4px 0', paddingLeft: 16}}>
-                      {grammarCorrection.corrections.slice(0, 3).map((correction, idx) => (
-                        <li key={idx} style={{marginBottom: 2}}>
-                          {correction.category}: Fixed {correction.pattern.replace(/\\/g, '').slice(0, 30)}...
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                <button 
-                  onClick={() => setShowGrammarInfo(false)}
-                  style={{
-                    background: '#f76e6e', 
-                    color: '#fff', 
-                    border: 'none', 
-                    borderRadius: 6, 
-                    padding: '4px 12px', 
-                    fontSize: '0.85em',
-                    marginTop: 8,
-                    cursor: 'pointer'
-                  }}
-                >
-                  Dismiss
-                </button>
-              </div>
-            ) : null}
-          </div>
+              )
+            }
+            onDismiss={!isCorrectingGrammar ? () => setShowGrammarInfo(false) : undefined}
+            style={{marginBottom: 24}}
+          />
         )}
 
         {/* Emotion Detection Status Display */}
